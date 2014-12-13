@@ -26,7 +26,7 @@ class FitsBinTable:
         self.data = pd.DataFrame(hdu.data).T
 
 
-class IUVSReader:
+class IUVS1AReader:
     """For Level1a"""
     def __init__(self, fname):
         infile = gzip.open(fname, 'rb')
@@ -38,6 +38,41 @@ class IUVSReader:
         self.pixelgeo = self.hdulist[4]
         self.spacecraftgeo = self.hdulist[5]
         self.observation = self.hdulist[6]
+
+    @property
+    def img_header(self):
+        imgdata = self.hdulist[0]
+        return imgdata.header
+
+    @property
+    def img(self):
+        return self.hdulist[0].data
+
+    @property
+    def capture(self):
+        string = self.img_header['CAPTURE']
+        import datetime as dt
+        cleaned = string[:-3]+'0'
+        time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
+        return time
+
+    def plot_img_data(self):
+        time = self.capture
+        fig, ax = plt.subplots()  # figsize=(8, 6))
+        ax.imshow(self.img)
+        ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
+                                            xuv=self.img_header['XUV']))
+        return ax
+
+
+class IUVS1BReader:
+    """For Level1a"""
+    def __init__(self, fname):
+        infile = gzip.open(fname, 'rb')
+        self.fname = os.path.basename(fname)
+        self.hdulist = fits.open(infile)
+        for hdu in self.hdulist[1:]:
+            setattr(self, hdu.header['EXTNAME'], hdu.data)
 
     @property
     def img_header(self):
