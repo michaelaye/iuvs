@@ -1,5 +1,5 @@
 pro dark_first_data
-  file_array = file_search('mvn_iuv_l1b_outbound-orbit00113-mode1001-muv_20141019T120821_v00_r00.fits.gz', count=num_files)
+  file_array = file_search('/maven_iuvs/stage/products/level1b/mvn_iuv_l1b_outbound-orbit00113-mode1001-muv_20141019T120821_v00_r00.fits.gz', count=num_files)
 
   l1b=iuvs_read_fits(file_array[0])
   n_spe = n_elements(l1b.primary[*,0,0])

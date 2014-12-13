@@ -2,11 +2,14 @@
 ;Nick Schneider, 6 June 14
 ;shows the need to scale down dark frame for optimal subtraction in a CruiseCal 2 frame
 
-imstruct=iuvs_read_fits("~/MAVENData/CruiseCal2/mvn_iuv_l1b_cruisecal2-mode080-muv_20140521T120028_v00_r00.fits.gz")
+imstruct=iuvs_read_fits("/maven_iuvs/stage/products/level1b/mvn_iuv_l1b_cruisecal2-mode080-muv_20140521T120028_v00_r00.fits.gz")
 dark=imstruct.DETECTOR_DARK
 raw=imstruct.DETECTOR_RAW
 rawa=avg(raw,2) 
 !p.multi=0                                              
+print,"Raw, size:",size(raw)
+print,"Dark, size:",size(dark)
+print,"rawa, size:",size(rawa)
 
 ;show mismatch between light and dark values at unit scaling
 window,0,xs=415,ys=400
@@ -16,9 +19,10 @@ for j=0,61 do begin
    for i=0,10 do begin
       frac=0.8+i*0.03
       diff=rawa-frac*dark
+      print,size(diff)
       oplot,diff(*,j)+i*1000
    endfor
-wait,0.05
+   wait,0.05
 endfor
 
 ;show decreased noise in averaged spectrum at ~0.9 dark scaling
@@ -31,7 +35,7 @@ for i=0,10 do begin
    diffa=avg(diff,1)
    oplot,diffa+i*100
 endfor
-
+;
 ;display image subtractions for different scalings
 window,2,xs=350,ys=870
 for i=0,10 do begin
