@@ -4,6 +4,20 @@ import gzip
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
+from pathlib import Path
+import socket
+import glob
+
+host = socket.gethostname()
+home = Path(os.environ['HOME'])
+
+if host.startswith('maven-iuvs-itf'):
+    products = Path('/maven_iuvs/stage/products'
+else:
+    products = path / 'data' / 'iuvs'
+
+level1apath = products / 'level1a'
+level1bpath = products / 'level1b'
 
 
 class IUVS_Filename:
@@ -63,3 +77,26 @@ class IUVSReader:
         ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
                                             xuv=self.img_header['XUV']))
         return ax
+
+
+def get_l1a_filenames():
+    return glob.glob(str(level1apath)+'/fits.gz')
+
+def get_l1a_files_stats():
+    fnames = get_l1a_filenames()
+    iuvs_fnames = []
+    exceptions = []
+    for fname in fnames:
+        try:
+            iuvs_fnames.append(IUVS_Filename(fname))
+        except Exception as e:
+            exceptions.append(fname)
+            continue
+    s = pd.Series(iuvs_fnames)
+    df = pd.DataFrame()
+    for item in 'phase cycle mode channel time level version revision'.split():
+        df[item] = s.map(lambda x: getattr(x, item))
+    df['channel'] = df.channel.astype('category')
+    df.set_index('time', inplace=True)
+    df.sort_index(inplace=True)
+    return df
