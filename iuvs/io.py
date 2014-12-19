@@ -6,7 +6,6 @@ import pandas as pd
 import os
 from pathlib import Path
 import socket
-import glob
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -14,7 +13,7 @@ home = Path(os.environ['HOME'])
 if host.startswith('maven-iuvs-itf'):
     products = Path('/maven_iuvs/stage/products')
 else:
-    products = path / 'data' / 'iuvs'
+    products = home / 'data' / 'iuvs'
 
 level1apath = products / 'level1a'
 level1bpath = products / 'level1b'
@@ -24,7 +23,7 @@ class IUVS_Filename:
     def __init__(self, fname):
         self.root = os.path.dirname(fname)
         self.basename = os.path.basename(fname)
-        tokens = basename.split('_')
+        tokens = self.basename.split('_')
         self.mission, self.instrument = tokens[:2]
         self.level = tokens[2]
         self.phase = tokens[3]
@@ -77,9 +76,9 @@ class IUVS1AReader:
             fig, ax = plt.subplots()  # figsize=(8, 6))
         ax.imshow(self.img)
         ax.set_title("{channel}, {phase}, {int}"
-            .format(channel=self.fname.channel,
-                    phase=self.fname.phase,
-                    int=self.img_header['INT_TIME']))
+                     .format(channel=self.fname.channel,
+                             phase=self.fname.phase,
+                             int=self.img_header['INT_TIME']))
         return ax
 
 
@@ -100,7 +99,7 @@ def get_l1a_files_stats():
     for fname in fnames:
         try:
             iuvs_fnames.append(IUVS_Filename(fname))
-        except Exception as e:
+        except Exception:
             exceptions.append(fname)
             continue
     s = pd.Series(iuvs_fnames)
