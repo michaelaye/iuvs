@@ -12,7 +12,7 @@ host = socket.gethostname()
 home = Path(os.environ['HOME'])
 
 if host.startswith('maven-iuvs-itf'):
-    products = Path('/maven_iuvs/stage/products'
+    products = Path('/maven_iuvs/stage/products')
 else:
     products = path / 'data' / 'iuvs'
 
@@ -22,7 +22,9 @@ level1bpath = products / 'level1b'
 
 class IUVS_Filename:
     def __init__(self, fname):
-        tokens = fname.split('_')
+        self.root = os.path.dirname(fname)
+        self.basename = os.path.basename(fname)
+        tokens = basename.split('_')
         self.mission, self.instrument = tokens[:2]
         self.level = tokens[2]
         self.phase = tokens[3]
@@ -44,7 +46,7 @@ class IUVS1AReader:
     """For Level1a"""
     def __init__(self, fname):
         infile = gzip.open(fname, 'rb')
-        self.fname = os.path.basename(fname)
+        self.fname = fname
         self.hdulist = fits.open(infile)
         self.integration = FitsBinTable(self.hdulist[1])
         self.engineering = FitsBinTable(self.hdulist[2])
@@ -70,17 +72,25 @@ class IUVS1AReader:
         time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
         return time
 
-    def plot_img_data(self):
-        time = self.capture
-        fig, ax = plt.subplots()  # figsize=(8, 6))
+    def plot_img_data(self, ax=None):
+        if ax is None:
+            fig, ax = plt.subplots()  # figsize=(8, 6))
         ax.imshow(self.img)
-        ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
-                                            xuv=self.img_header['XUV']))
+        ax.set_title("{channel}, {phase}, {int}"
+            .format(channel=self.fname.channel,
+                    phase=self.fname.phase,
+                    int=self.img_header['INT_TIME']))
         return ax
 
 
 def get_l1a_filenames():
-    return glob.glob(str(level1apath)+'/fits.gz')
+    return level1apath.glob('*.fits.gz')
+
+
+def get_l1a_darks(darktype=''):
+    searchpattern = '*' + darktype + 'dark*.fits.gz'
+    print("Searching for", searchpattern)
+    return level1apath.glob('*'+darktype+'dark*.fits.gz')
 
 
 def get_l1a_files_stats():
@@ -129,9 +139,10 @@ class IUVS1BReader:
         time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
         return time
 
-    def plot_img_data(self):
+    def plot_img_data(self, ax=None):
         time = self.capture
-        fig, ax = plt.subplots()  # figsize=(8, 6))
+        if ax is None:
+            fig, ax = plt.subplots()  # figsize=(8, 6))
         ax.imshow(self.img)
         ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
                                             xuv=self.img_header['XUV']))

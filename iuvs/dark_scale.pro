@@ -6,10 +6,7 @@ imstruct=iuvs_read_fits("/maven_iuvs/stage/products/level1b/mvn_iuv_l1b_cruiseca
 dark=imstruct.DETECTOR_DARK
 raw=imstruct.DETECTOR_RAW
 rawa=avg(raw,2) 
-!p.multi=0                                              
-print,"Raw, size:",size(raw)
-print,"Dark, size:",size(dark)
-print,"rawa, size:",size(rawa)
+!p.multi=0                                     
 
 ;show mismatch between light and dark values at unit scaling
 window,0,xs=415,ys=400
