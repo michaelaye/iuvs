@@ -22,8 +22,13 @@ level1bpath = products / 'level1b'
 
 class Filename:
     def __init__(self, fname):
-        self.root = os.path.dirname(fname)
-        self.basename = os.path.basename(fname)
+        try:
+            self.root = os.path.dirname(fname)
+            self.basename = os.path.basename(fname)
+        except AttributeError:
+            # happens if fname is a PosixPath
+            self.root = str(fname.parent)
+            self.basename = fname.name
         tokens = self.basename.split('_')
         self.mission, self.instrument = tokens[:2]
         self.level = tokens[2]
@@ -31,7 +36,15 @@ class Filename:
         self.timestr, self.version = tokens[4:6]
         self.revision = tokens[6].split('.')[0]
         phasetokens = self.phase.split('-')
-        self.phase, self.cycle, self.mode, self.channel = phasetokens
+        if len(phasetokens) == 4:
+            self.phase, self.cycle_orbit, self.mode, self.channel = phasetokens
+        elif len(phasetokens) == 3:
+            self.phase, self.cycle_orbit, self.channel = phasetokens
+            self.mode = 'N/A'
+        else:
+            self.phase, self.channel = phasetokens
+            self.mode = 'N/A'
+            self.cycle_orbit = 'N/A'
         self.time = dt.datetime.strptime(self.timestr,
                                          '%Y%m%dT%H%M%S')
 
