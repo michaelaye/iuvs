@@ -20,11 +20,11 @@ level1apath = products / 'level1a'
 level1bpath = products / 'level1b'
 
 
-class IUVS_Filename:
+class Filename:
     def __init__(self, fname):
         self.root = os.path.dirname(fname)
         self.basename = os.path.basename(fname)
-        tokens = basename.split('_')
+        tokens = self.basename.split('_')
         self.mission, self.instrument = tokens[:2]
         self.level = tokens[2]
         self.phase = tokens[3]
@@ -42,7 +42,7 @@ class FitsBinTable:
         self.data = pd.DataFrame(hdu.data).T
 
 
-class IUVS1AReader:
+class L1AReader:
     """For Level1a"""
     def __init__(self, fname):
         infile = gzip.open(fname, 'rb')
@@ -83,17 +83,17 @@ class IUVS1AReader:
         return ax
 
 
-def get_l1a_filenames():
+def l1a_filenames():
     return level1apath.glob('*.fits.gz')
 
 
-def get_l1a_darks(darktype=''):
+def l1a_darks(darktype=''):
     searchpattern = '*' + darktype + 'dark*.fits.gz'
     print("Searching for", searchpattern)
     return level1apath.glob('*'+darktype+'dark*.fits.gz')
 
 
-def get_l1a_files_stats():
+def get_l1a_filename_stats():
     fnames = get_l1a_filenames()
     iuvs_fnames = []
     exceptions = []
@@ -113,7 +113,7 @@ def get_l1a_files_stats():
     return df
 
 
-class IUVS1BReader:
+class L1BReader:
     """For Level1a"""
     def __init__(self, fname):
         infile = gzip.open(fname, 'rb')
