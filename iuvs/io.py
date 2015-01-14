@@ -19,10 +19,15 @@ level1apath = products / 'level1a'
 level1bpath = products / 'level1b'
 
 
-class IUVS_Filename:
+class Filename:
     def __init__(self, fname):
-        self.root = os.path.dirname(fname)
-        self.basename = os.path.basename(fname)
+        try:
+            self.root = os.path.dirname(fname)
+            self.basename = os.path.basename(fname)
+        except AttributeError:
+            # happens if fname is a PosixPath
+            self.root = str(fname.parent)
+            self.basename = fname.name
         tokens = self.basename.split('_')
         self.mission, self.instrument = tokens[:2]
         self.level = tokens[2]
@@ -30,7 +35,15 @@ class IUVS_Filename:
         self.timestr, self.version = tokens[4:6]
         self.revision = tokens[6].split('.')[0]
         phasetokens = self.phase.split('-')
-        self.phase, self.cycle, self.mode, self.channel = phasetokens
+        if len(phasetokens) == 4:
+            self.phase, self.cycle_orbit, self.mode, self.channel = phasetokens
+        elif len(phasetokens) == 3:
+            self.phase, self.cycle_orbit, self.channel = phasetokens
+            self.mode = 'N/A'
+        else:
+            self.phase, self.channel = phasetokens
+            self.mode = 'N/A'
+            self.cycle_orbit = 'N/A'
         self.time = dt.datetime.strptime(self.timestr,
                                          '%Y%m%dT%H%M%S')
 
@@ -41,7 +54,7 @@ class FitsBinTable:
         self.data = pd.DataFrame(hdu.data).T
 
 
-class IUVS1AReader:
+class L1AReader:
     """For Level1a"""
     def __init__(self, fname):
         infile = gzip.open(fname, 'rb')
@@ -82,23 +95,23 @@ class IUVS1AReader:
         return ax
 
 
-def get_l1a_filenames():
+def l1a_filenames():
     return [str(i) for i in level1apath.glob('*.fits.gz')]
 
 
-def get_l1a_darks(darktype=''):
+def l1a_darks(darktype=''):
     searchpattern = '*' + darktype + 'dark*.fits.gz'
     print("Searching for", searchpattern)
     return level1apath.glob('*'+darktype+'dark*.fits.gz')
 
 
-def get_l1a_files_stats():
-    fnames = get_l1a_filenames()
+def get_l1a_filename_stats():
+    fnames = l1a_filenames()
     iuvs_fnames = []
     exceptions = []
     for fname in fnames:
         try:
-            iuvs_fnames.append(IUVS_Filename(fname))
+            iuvs_fnames.append(Filename(fname))
         except Exception:
             exceptions.append(fname)
             continue
@@ -112,7 +125,7 @@ def get_l1a_files_stats():
     return df
 
 
-class IUVS1BReader:
+class L1BReader:
     """For Level1a"""
     def __init__(self, fname):
         infile = gzip.open(fname, 'rb')
@@ -146,5 +159,3 @@ class IUVS1BReader:
         ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
                                             xuv=self.img_header['XUV']))
         return ax
-
-
