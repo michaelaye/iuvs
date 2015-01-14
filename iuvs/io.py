@@ -83,7 +83,7 @@ class IUVS1AReader:
 
 
 def get_l1a_filenames():
-    return level1apath.glob('*.fits.gz')
+    return [str(i) for i in level1apath.glob('*.fits.gz')]
 
 
 def get_l1a_darks(darktype=''):
@@ -146,3 +146,5 @@ class IUVS1BReader:
         ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
                                             xuv=self.img_header['XUV']))
         return ax
+
+
