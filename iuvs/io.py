@@ -11,12 +11,15 @@ host = socket.gethostname()
 home = Path(os.environ['HOME'])
 
 if host.startswith('maven-iuvs-itf'):
-    products = Path('/maven_iuvs/stage/products')
+    stage = Path('/maven_iuvs/stage/products')
+    production = Path('/maven_iuvs/production/products')
 else:
-    products = home / 'data' / 'iuvs'
+    stage = home / 'data' / 'iuvs'
 
-level1apath = products / 'level1a'
-level1bpath = products / 'level1b'
+stagelevel1apath = stage / 'level1a'
+stagelevel1bpath = stage / 'level1b'
+productionlevel1apath = production / 'level1a'
+productionlevel1bpath = production / 'level1b'
 
 
 class Filename:
@@ -95,8 +98,26 @@ class L1AReader:
         return ax
 
 
-def l1a_filenames():
-    return level1apath.glob('*.fits.gz')
+def get_filenames(level, pattern='*', stage=True):
+    if level == 'l1a':
+        if stage:
+            path = stagelevel1apath
+        else:
+            path = productionlevel1apath
+    else:
+        if stage:
+            path = stagelevel1bpath
+        else:
+            path = productionlevel1bpath
+    return [str(i) for i in list(path.glob(pattern+'.fits.gz'))]
+
+
+def l1a_filenames(pattern='*', stage=True):
+    return get_filenames('l1a', pattern, stage)
+
+
+def l1b_filenames(pattern='*', stage=True):
+    return get_filenames('l1b', pattern, stage)
 
 
 def l1a_darks(darktype=''):
