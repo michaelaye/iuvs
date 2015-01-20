@@ -48,6 +48,9 @@ class Filename:
         self.time = dt.datetime.strptime(self.timestr,
                                          '%Y%m%dT%H%M%S')
 
+    def image_stats(self):
+        return image_stats(self.img)
+
 
 class FitsBinTable:
 
@@ -85,10 +88,6 @@ class IUVS_Data:
         time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
         return time
 
-    def image_stats(self):
-        print("Mean:", self.img.mean())
-        print("Min:", self.img.min())
-        print("Max:", self.img.max())
 
 
 class L1AReader(IUVS_Data):
@@ -149,6 +148,10 @@ def l1a_darks(darktype=''):
     searchpattern = '*' + darktype + 'dark*.fits.gz'
     print("Searching for", searchpattern)
     return level1apath.glob('*'+darktype+'dark*.fits.gz')
+
+
+def image_stats(data):
+    return pd.Series(data.ravel()).describe()
 
 
 def get_l1a_filename_stats():
