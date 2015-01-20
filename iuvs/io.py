@@ -20,6 +20,7 @@ level1bpath = products / 'level1b'
 
 
 class Filename:
+
     def __init__(self, fname):
         try:
             self.root = os.path.dirname(fname)
@@ -49,13 +50,51 @@ class Filename:
 
 
 class FitsBinTable:
+
     def __init__(self, hdu):
         self.header = hdu.header
         self.data = pd.DataFrame(hdu.data).T
 
 
-class L1AReader:
+class IUVS_Data:
+
+    @property
+    def img_header(self):
+        imgdata = self.hdulist[0]
+        return imgdata.header
+
+    @property
+    def img(self):
+        return self.hdulist[0].data
+
+    def plot_img_data(self, ax=None):
+        if ax is None:
+            fig, ax = plt.subplots()  # figsize=(8, 6))
+        ax.imshow(self.img)
+        ax.set_title("{channel}, {phase}, {int}"
+                     .format(channel=self.fname.channel,
+                             phase=self.fname.phase,
+                             int=self.img_header['INT_TIME']))
+        return ax
+
+    @property
+    def capture(self):
+        string = self.img_header['CAPTURE']
+        import datetime as dt
+        cleaned = string[:-3]+'0'
+        time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
+        return time
+
+    def image_stats(self):
+        print("Mean:", self.img.mean())
+        print("Min:", self.img.min())
+        print("Max:", self.img.max())
+
+
+class L1AReader(IUVS_Data):
+
     """For Level1a"""
+
     def __init__(self, fname):
         infile = gzip.open(fname, 'rb')
         self.fname = fname
@@ -67,31 +106,38 @@ class L1AReader:
         self.spacecraftgeo = self.hdulist[5]
         self.observation = self.hdulist[6]
 
-    @property
-    def img_header(self):
-        imgdata = self.hdulist[0]
-        return imgdata.header
 
-    @property
-    def img(self):
-        return self.hdulist[0].data
+class L1BReader(IUVS_Data):
 
-    @property
-    def capture(self):
-        string = self.img_header['CAPTURE']
-        import datetime as dt
-        cleaned = string[:-3]+'0'
-        time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
-        return time
+    """For Level1B"""
+
+    works_with_dataframes = [
+        'DarkIntegration',
+        'DarkEngineering',
+        'background_light_source',
+        'Integration',
+        'Engineering']
+
+    def __init__(self, fname):
+        infile = gzip.open(fname, 'rb')
+        self.fname = os.path.basename(fname)
+        self.hdulist = fits.open(infile)
+        for hdu in self.hdulist[1:]:
+            name = hdu.header['EXTNAME']
+            setattr(self, name+'_header', hdu.header)
+            if name in self.works_with_dataframes:
+                setattr(self, name, pd.DataFrame(hdu.data).T)
+            else:
+                setattr(self, hdu.header['EXTNAME'], hdu.data)
+        self.darks_interpolated = self.background_dark
 
     def plot_img_data(self, ax=None):
+        time = self.capture
         if ax is None:
             fig, ax = plt.subplots()  # figsize=(8, 6))
         ax.imshow(self.img)
-        ax.set_title("{channel}, {phase}, {int}"
-                     .format(channel=self.fname.channel,
-                             phase=self.fname.phase,
-                             int=self.img_header['INT_TIME']))
+        ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
+                                            xuv=self.img_header['XUV']))
         return ax
 
 
@@ -123,39 +169,3 @@ def get_l1a_filename_stats():
     df.set_index('time', inplace=True)
     df.sort_index(inplace=True)
     return df
-
-
-class L1BReader:
-    """For Level1a"""
-    def __init__(self, fname):
-        infile = gzip.open(fname, 'rb')
-        self.fname = os.path.basename(fname)
-        self.hdulist = fits.open(infile)
-        for hdu in self.hdulist[1:]:
-            setattr(self, hdu.header['EXTNAME'], hdu.data)
-
-    @property
-    def img_header(self):
-        imgdata = self.hdulist[0]
-        return imgdata.header
-
-    @property
-    def img(self):
-        return self.hdulist[0].data
-
-    @property
-    def capture(self):
-        string = self.img_header['CAPTURE']
-        import datetime as dt
-        cleaned = string[:-3]+'0'
-        time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
-        return time
-
-    def plot_img_data(self, ax=None):
-        time = self.capture
-        if ax is None:
-            fig, ax = plt.subplots()  # figsize=(8, 6))
-        ax.imshow(self.img)
-        ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
-                                            xuv=self.img_header['XUV']))
-        return ax
