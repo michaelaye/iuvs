@@ -59,7 +59,15 @@ class FitsBinTable:
         self.data = pd.DataFrame(hdu.data).T
 
 
-class IUVS_Data:
+class IUVS_FitsFile:
+
+    def __init__(self, fname):
+        if fname.endswith('.gz'):
+            infile = gzip.open(fname, 'rb')
+        else:
+            infile = fname
+        self.fname = fname
+        self.hdulist = fits.open(infile)
 
     @property
     def img_header(self):
@@ -89,24 +97,28 @@ class IUVS_Data:
         return time
 
 
-
-class L1AReader(IUVS_Data):
+class L1AReader(IUVS_FitsFile):
 
     """For Level1a"""
 
+    works_with_dataframes = [
+        'Integration',
+        'Engineering',
+        ]
+
     def __init__(self, fname):
-        infile = gzip.open(fname, 'rb')
-        self.fname = fname
-        self.hdulist = fits.open(infile)
-        self.integration = FitsBinTable(self.hdulist[1])
-        self.engineering = FitsBinTable(self.hdulist[2])
-        self.binning = self.hdulist[3]
-        self.pixelgeo = self.hdulist[4]
-        self.spacecraftgeo = self.hdulist[5]
-        self.observation = self.hdulist[6]
+        super().__init__(fname)
+        print("I AM STILL HERE")
+        for hdu in self.hdulist[1:]:
+            name = hdu.header['EXTNAME']
+            setattr(self, name+'_header', hdu.header)
+            if name in self.works_with_dataframes:
+                setattr(self, name, pd.DataFrame(hdu.data).T)
+            else:
+                setattr(self, hdu.header['EXTNAME'], hdu.data)
 
 
-class L1BReader(IUVS_Data):
+class L1BReader(IUVS_FitsFile):
 
     """For Level1B"""
 
@@ -118,9 +130,7 @@ class L1BReader(IUVS_Data):
         'Engineering']
 
     def __init__(self, fname):
-        infile = gzip.open(fname, 'rb')
-        self.fname = os.path.basename(fname)
-        self.hdulist = fits.open(infile)
+        super().__init__(fname)
         for hdu in self.hdulist[1:]:
             name = hdu.header['EXTNAME']
             setattr(self, name+'_header', hdu.header)
