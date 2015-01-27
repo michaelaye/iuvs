@@ -185,18 +185,27 @@ def get_l1a_filename_stats():
 
 
 class KindHeader(fits.Header):
+
+    """Fits header with the 'kind' card."""
+
     def __init__(self, kind='original dark'):
         super().__init__()
         self.set('kind', kind, comment='The kind of image')
 
 
 class PrimHeader(KindHeader):
+
+    """Fits primary header with a name card."""
+
     def __init__(self):
         super().__init__()
         self.set('name', 'dark1')
 
 
 class FittedHeader(KindHeader):
+
+    """Fits header with a kind and a rank card."""
+
     def __init__(self, kind, rank):
         super().__init__('fitted dark')
         comment = 'The degree of polynom used for the scaling'
@@ -204,6 +213,10 @@ class FittedHeader(KindHeader):
 
 
 class DarkWriter:
+
+    """Manages the creation of fits file for dark analysis results.
+    """
+
     def __init__(self, outfname, dark1, dark2, clobber=False):
         self.outfname = outfname
         self.clobber = clobber
