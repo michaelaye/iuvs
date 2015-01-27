@@ -6,6 +6,7 @@ import pandas as pd
 import os
 from pathlib import Path
 import socket
+from . import scaling
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -23,6 +24,7 @@ productionlevel1bpath = production / 'level1b'
 
 
 class Filename:
+
     def __init__(self, fname):
         try:
             self.root = os.path.dirname(fname)
@@ -50,25 +52,26 @@ class Filename:
         self.time = dt.datetime.strptime(self.timestr,
                                          '%Y%m%dT%H%M%S')
 
+    def image_stats(self):
+        return image_stats(self.img)
+
 
 class FitsBinTable:
+
     def __init__(self, hdu):
         self.header = hdu.header
         self.data = pd.DataFrame(hdu.data).T
 
 
-class L1AReader:
-    """For Level1a"""
+class IUVS_FitsFile:
+
     def __init__(self, fname):
-        infile = gzip.open(fname, 'rb')
+        if fname.endswith('.gz'):
+            infile = gzip.open(fname, 'rb')
+        else:
+            infile = fname
         self.fname = fname
         self.hdulist = fits.open(infile)
-        self.integration = FitsBinTable(self.hdulist[1])
-        self.engineering = FitsBinTable(self.hdulist[2])
-        self.binning = self.hdulist[3]
-        self.pixelgeo = self.hdulist[4]
-        self.spacecraftgeo = self.hdulist[5]
-        self.observation = self.hdulist[6]
 
     @property
     def img_header(self):
@@ -79,14 +82,6 @@ class L1AReader:
     def img(self):
         return self.hdulist[0].data
 
-    @property
-    def capture(self):
-        string = self.img_header['CAPTURE']
-        import datetime as dt
-        cleaned = string[:-3]+'0'
-        time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
-        return time
-
     def plot_img_data(self, ax=None):
         if ax is None:
             fig, ax = plt.subplots()  # figsize=(8, 6))
@@ -95,6 +90,67 @@ class L1AReader:
                      .format(channel=self.fname.channel,
                              phase=self.fname.phase,
                              int=self.img_header['INT_TIME']))
+        return ax
+
+    @property
+    def capture(self):
+        string = self.img_header['CAPTURE']
+        import datetime as dt
+        cleaned = string[:-3]+'0'
+        time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
+        return time
+
+
+class L1AReader(IUVS_FitsFile):
+
+    """For Level1a"""
+
+    works_with_dataframes = [
+        'Integration',
+        'Engineering',
+        ]
+
+    def __init__(self, fname):
+        super().__init__(fname)
+        print("I AM STILL HERE")
+        for hdu in self.hdulist[1:]:
+            name = hdu.header['EXTNAME']
+            setattr(self, name+'_header', hdu.header)
+            if name in self.works_with_dataframes:
+                setattr(self, name, pd.DataFrame(hdu.data).T)
+            else:
+                setattr(self, hdu.header['EXTNAME'], hdu.data)
+
+
+class L1BReader(IUVS_FitsFile):
+
+    """For Level1B"""
+
+    works_with_dataframes = [
+        'DarkIntegration',
+        'DarkEngineering',
+        'background_light_source',
+        'Integration',
+        'Engineering']
+
+    def __init__(self, fname):
+        super().__init__(fname)
+        for hdu in self.hdulist[1:]:
+            name = hdu.header['EXTNAME']
+            setattr(self, name+'_header', hdu.header)
+            if name in self.works_with_dataframes:
+                setattr(self, name, pd.DataFrame(hdu.data).T)
+            else:
+                setattr(self, hdu.header['EXTNAME'], hdu.data)
+        self.darks_interpolated = self.background_dark
+
+    def plot_img_data(self, ax=None):
+        time = self.capture
+        if ax is None:
+            fig, ax = plt.subplots()  # figsize=(8, 6))
+        ax.imshow(self.img)
+        ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
+                                            xuv=self.img_header['XUV']))
         return ax
 
 
@@ -126,13 +182,17 @@ def l1a_darks(darktype=''):
     return level1apath.glob('*'+darktype+'dark*.fits.gz')
 
 
+def image_stats(data):
+    return pd.Series(data.ravel()).describe()
+
+
 def get_l1a_filename_stats():
-    fnames = get_l1a_filenames()
+    fnames = l1a_filenames()
     iuvs_fnames = []
     exceptions = []
     for fname in fnames:
         try:
-            iuvs_fnames.append(IUVS_Filename(fname))
+            iuvs_fnames.append(Filename(fname))
         except Exception:
             exceptions.append(fname)
             continue
@@ -146,37 +206,91 @@ def get_l1a_filename_stats():
     return df
 
 
-class L1BReader:
-    """For Level1a"""
-    def __init__(self, fname):
-        infile = gzip.open(fname, 'rb')
-        self.fname = os.path.basename(fname)
-        self.hdulist = fits.open(infile)
-        for hdu in self.hdulist[1:]:
-            setattr(self, hdu.header['EXTNAME'], hdu.data)
+class KindHeader(fits.Header):
 
-    @property
-    def img_header(self):
-        imgdata = self.hdulist[0]
-        return imgdata.header
+    """FITS header with the 'kind' card."""
 
-    @property
-    def img(self):
-        return self.hdulist[0].data
+    def __init__(self, kind='original dark'):
+        super().__init__()
+        self.set('kind', kind, comment='The kind of image')
 
-    @property
-    def capture(self):
-        string = self.img_header['CAPTURE']
-        import datetime as dt
-        cleaned = string[:-3]+'0'
-        time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
-        return time
 
-    def plot_img_data(self, ax=None):
-        time = self.capture
-        if ax is None:
-            fig, ax = plt.subplots()  # figsize=(8, 6))
-        ax.imshow(self.img)
-        ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
-                                            xuv=self.img_header['XUV']))
-        return ax
+class PrimHeader(KindHeader):
+
+    """FITS primary header with a name card."""
+
+    def __init__(self):
+        super().__init__()
+        self.set('name', 'dark1')
+
+
+class FittedHeader(KindHeader):
+
+    """FITS header with a kind and a rank card."""
+
+    def __init__(self, rank):
+        super().__init__('fitted dark')
+        comment = "The degree of polynom used for the scaling."
+        self.set('rank', rank, comment=comment)
+        self.add_comment("The rank is '-1' for 'Additive' fitting, '0' is "
+                         "for 'Multiplicative' fitting without additive "
+                         "offset. For all ranks larger than 0 it is "
+                         "equivalent to the degree of the polynomial fit.")
+
+
+class DarkWriter:
+
+    """Manages the creation of FITS file for dark analysis results.
+    """
+
+    def __init__(self, outfname, dark1, dark2, clobber=False):
+        """Initialize DarkWriter.
+
+        Parameters
+        ==========
+            outfname: Filename of fits file to write
+            dark1, dark2: numpy.array of dark images
+            clobber: Boolean to control if to overwrite existing fits file
+                Default: False
+        """
+        self.outfname = outfname
+        self.clobber = clobber
+        header = PrimHeader()
+        hdu = fits.PrimaryHDU(dark1, header=header)
+        hdulist = fits.HDUList([hdu])
+        header = KindHeader()
+        hdu = fits.ImageHDU(dark2, header=header, name='dark2')
+        hdulist.append(hdu)
+        self.hdulist = hdulist
+
+    def append_polyfitted(self, scaler):
+        """Append a polynomial fitted dark to the fits file.
+
+        Parameters
+        ==========
+
+            polyscaler: type of scaling.Polyscaler
+
+        """
+        if type(scaler) == scaling.PolyScaler:
+            rank = scaler.rank
+        elif type(scaler) == scaling.MultScaler:
+            rank = 0
+        elif type(scaler) == scaling.AddScaler:
+            rank = -1
+        else:
+            rank = -99
+        # create fits header with rank and kind card
+        header = FittedHeader(rank)
+        # add coefficienst card
+        header['coeffs'] = str(list(scaler.p))
+        header.add_comment('The coefficients are listed highest rank first.')
+        # add stddev card
+        header.set('stddev', scaler.residual.std(),
+                   'Standard deviation of residual')
+        hdu = fits.ImageHDU(scaler.residual, header=header,
+                            name='rank{}'.format(rank))
+        self.hdulist.append(hdu)
+
+    def write(self):
+        self.hdulist.writeto(self.outfname, clobber=self.clobber)
