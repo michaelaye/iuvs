@@ -2,6 +2,7 @@ from scipy.optimize import curve_fit
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def multimodel(x, a):
     return a*x
 
@@ -11,6 +12,7 @@ def addmodel(x, a):
 
 
 class DarkScaler:
+
     def __init__(self, data_in, data_out):
         self.data_in = data_in
         self.data_out = data_out
@@ -35,16 +37,19 @@ class DarkScaler:
 
 
 class AddScaler(DarkScaler):
+
     def model(self, x, a):
         return a + x
 
 
 class MultScaler(DarkScaler):
+
     def model(self, x, a):
         return a * x
 
 
 class PolyScaler(DarkScaler):
+
     def __init__(self, data_in, data_out, rank=2):
         super().__init__(data_in, data_out)
         self.rank = rank
@@ -81,6 +86,7 @@ class PolyScaler(DarkScaler):
 
 
 class PolyScalerManager:
+
     def __init__(self, data_in, data_out, rankstart, rankend):
         self.rankstart = rankstart
         self.rankend = rankend
