@@ -267,7 +267,7 @@ class DarkWriter:
         # add stddev card
         header.set('stddev', scaler.residual.std(),
                    'Standard deviation of residual')
-        hdu = fits.ImageHDU(scaler.scaled, header=header,
+        hdu = fits.ImageHDU(scaler.residual, header=header,
                             name='rank{}'.format(rank))
         self.hdulist.append(hdu)
 
