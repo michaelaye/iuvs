@@ -50,6 +50,8 @@ class MultScaler(DarkScaler):
 
 class PolyScaler(DarkScaler):
 
+    """Manage polynomial fits. Default rank is 2."""
+
     def __init__(self, data_in, data_out, rank=2):
         super().__init__(data_in, data_out)
         self.rank = rank
@@ -95,15 +97,18 @@ class PolyScalerManager:
         fractionals = []
         coeffs = []
         polynoms = []
+        scalers = []
         for rank in range(rankstart, rankend+1):
             scaler = PolyScaler(data_in, data_out, rank)
             scaler.do_fit()
+            scalers.append(scaler)
             polynoms.append(scaler.poly)
             coeffs.append(scaler.p)
             fractionals.append(scaler.fractional.mean())
         self.fractionals = fractionals
         self.coeffs = coeffs
         self.polynoms = polynoms
+        self.scalers = scalers
 
     def plot_fractionals(self):
         plt.plot(range(self.rankstart, self.rankend+1),

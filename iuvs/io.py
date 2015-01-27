@@ -6,6 +6,7 @@ import pandas as pd
 import os
 from pathlib import Path
 import socket
+from . import scaling
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -206,10 +207,14 @@ class FittedHeader(KindHeader):
 
     """FITS header with a kind and a rank card."""
 
-    def __init__(self, kind, rank):
+    def __init__(self, rank):
         super().__init__('fitted dark')
-        comment = 'The degree of polynom used for the scaling'
+        comment = "The degree of polynom used for the scaling."
         self.set('rank', rank, comment=comment)
+        self.add_comment("The rank is '-1' for 'Additive' fitting, '0' is "
+                         "for 'Multiplicative' fitting without additive "
+                         "offset. For all ranks larger than 0 it is "
+                         "equivalent to the degree of the polynomial fit.")
 
 
 class DarkWriter:
@@ -218,6 +223,15 @@ class DarkWriter:
     """
 
     def __init__(self, outfname, dark1, dark2, clobber=False):
+        """Initialize DarkWriter.
+
+        Parameters
+        ==========
+            outfname: Filename of fits file to write
+            dark1, dark2: numpy.array of dark images
+            clobber: Boolean to control if to overwrite existing fits file
+                Default: False
+        """
         self.outfname = outfname
         self.clobber = clobber
         header = PrimHeader()
@@ -228,9 +242,33 @@ class DarkWriter:
         hdulist.append(hdu)
         self.hdulist = hdulist
 
-    def append_polyfitted(self, fitted, kind, rank):
-        header = FittedHeader(kind, rank)
-        hdu = fits.ImageHDU(fitted, header=header)
+    def append_polyfitted(self, scaler):
+        """Append a polynomial fitted dark to the fits file.
+
+        Parameters
+        ==========
+
+            polyscaler: type of scaling.Polyscaler
+
+        """
+        if type(scaler) == scaling.PolyScaler:
+            rank = scaler.rank
+        elif type(scaler) == scaling.MultScaler:
+            rank = 0
+        elif type(scaler) == scaling.AddScaler:
+            rank = -1
+        else:
+            rank = -99
+        # create fits header with rank and kind card
+        header = FittedHeader(rank)
+        # add coefficienst card
+        header['coeffs'] = str(list(scaler.p))
+        header.add_comment('The coefficients are listed highest rank first.')
+        # add stddev card
+        header.set('stddev', scaler.residual.std(),
+                   'Standard deviation of residual')
+        hdu = fits.ImageHDU(scaler.scaled, header=header,
+                            name='rank{}'.format(rank))
         self.hdulist.append(hdu)
 
     def write(self):
