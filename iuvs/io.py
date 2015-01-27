@@ -182,3 +182,43 @@ def get_l1a_filename_stats():
     df.set_index('time', inplace=True)
     df.sort_index(inplace=True)
     return df
+
+
+class KindHeader(fits.Header):
+    def __init__(self, kind='original dark'):
+        super().__init__()
+        self.set('kind', kind, comment='The kind of image')
+
+
+class PrimHeader(KindHeader):
+    def __init__(self):
+        super().__init__()
+        self.set('name', 'dark1')
+
+
+class FittedHeader(KindHeader):
+    def __init__(self, kind, rank):
+        super().__init__('fitted dark')
+        comment = 'The degree of polynom used for the scaling'
+        self.set('rank', rank, comment=comment)
+
+
+class DarkWriter:
+    def __init__(self, outfname, dark1, dark2, clobber=False):
+        self.outfname = outfname
+        self.clobber = clobber
+        header = PrimHeader()
+        hdu = fits.PrimaryHDU(dark1, header=header)
+        hdulist = fits.HDUList([hdu])
+        header = KindHeader()
+        hdu = fits.ImageHDU(dark2, header=header, name='dark2')
+        hdulist.append(hdu)
+        self.hdulist = hdulist
+
+    def append_polyfitted(self, fitted, kind, rank):
+        header = FittedHeader(kind, rank)
+        hdu = fits.ImageHDU(fitted, header=header)
+        self.hdulist.append(hdu)
+
+    def write(self):
+        self.hdulist.writeto(self.outfname, clobber=self.clobber)
