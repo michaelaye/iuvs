@@ -23,6 +23,73 @@ productionlevel1apath = production / 'level1a'
 productionlevel1bpath = production / 'level1b'
 
 
+def get_filenames(level, pattern=None, stage=True, ext='.fits.gz'):
+    if pattern is None:
+        pattern = '*'
+    else:
+        pattern = '*' + pattern + '*'
+    if level == 'l1a':
+        if stage:
+            path = stagelevel1apath
+        else:
+            path = productionlevel1apath
+    else:
+        if stage:
+            path = stagelevel1bpath
+        else:
+            path = productionlevel1bpath
+    return [str(i) for i in list(path.glob(pattern + ext))]
+
+
+def l1a_filenames(pattern, **kwargs):
+    return get_filenames('l1a', pattern=pattern, **kwargs)
+
+
+def l1b_filenames(pattern, **kwargs):
+    """Search for L1B filenames with patterns.
+
+    <pattern> will be bracketed with '*', so needs to be correct in itself.
+    For example "mode080-fuv" but not "mode080fuv".
+
+    kwargs
+    ======
+        stage: False/True (gives production files if False). Default: True
+        ext: Extension is by default .fits.gz Use this to search for other
+             files like .txt
+    """
+    return get_filenames('l1b', pattern=pattern, **kwargs)
+
+
+def l1a_darks(darktype=''):
+    searchpattern = '*' + darktype + 'dark*.fits.gz'
+    print("Searching for", searchpattern)
+    return l1a_filenames(searchpattern)
+
+
+def image_stats(data):
+    return pd.Series(data.ravel()).describe()
+
+
+def get_l1a_filename_stats():
+    fnames = l1a_filenames()
+    iuvs_fnames = []
+    exceptions = []
+    for fname in fnames:
+        try:
+            iuvs_fnames.append(Filename(fname))
+        except Exception:
+            exceptions.append(fname)
+            continue
+    s = pd.Series(iuvs_fnames)
+    df = pd.DataFrame()
+    for item in 'phase cycle mode channel time level version revision'.split():
+        df[item] = s.map(lambda x: getattr(x, item))
+    df['channel'] = df.channel.astype('category')
+    df.set_index('time', inplace=True)
+    df.sort_index(inplace=True)
+    return df
+
+
 class Filename:
 
     def __init__(self, fname):
@@ -63,9 +130,11 @@ class FitsBinTable:
         self.data = pd.DataFrame(hdu.data).T
 
 
-class IUVS_FitsFile:
+class FitsFile:
 
     def __init__(self, fname):
+        if type(fname) == list:
+            fname = fname[0]
         if fname.endswith('.gz'):
             infile = gzip.open(fname, 'rb')
         else:
@@ -101,7 +170,7 @@ class IUVS_FitsFile:
         return time
 
 
-class L1AReader(IUVS_FitsFile):
+class L1AReader(FitsFile):
 
     """For Level1a"""
 
@@ -122,7 +191,7 @@ class L1AReader(IUVS_FitsFile):
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
 
 
-class L1BReader(IUVS_FitsFile):
+class L1BReader(FitsFile):
 
     """For Level1B"""
 
@@ -152,58 +221,6 @@ class L1BReader(IUVS_FitsFile):
         ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
                                             xuv=self.img_header['XUV']))
         return ax
-
-
-def get_filenames(level, pattern='*', stage=True):
-    if level == 'l1a':
-        if stage:
-            path = stagelevel1apath
-        else:
-            path = productionlevel1apath
-    else:
-        if stage:
-            path = stagelevel1bpath
-        else:
-            path = productionlevel1bpath
-    return [str(i) for i in list(path.glob(pattern+'.fits.gz'))]
-
-
-def l1a_filenames(pattern='*', stage=True):
-    return get_filenames('l1a', pattern, stage)
-
-
-def l1b_filenames(pattern='*', stage=True):
-    return get_filenames('l1b', pattern, stage)
-
-
-def l1a_darks(darktype=''):
-    searchpattern = '*' + darktype + 'dark*.fits.gz'
-    print("Searching for", searchpattern)
-    return level1apath.glob('*'+darktype+'dark*.fits.gz')
-
-
-def image_stats(data):
-    return pd.Series(data.ravel()).describe()
-
-
-def get_l1a_filename_stats():
-    fnames = l1a_filenames()
-    iuvs_fnames = []
-    exceptions = []
-    for fname in fnames:
-        try:
-            iuvs_fnames.append(Filename(fname))
-        except Exception:
-            exceptions.append(fname)
-            continue
-    s = pd.Series(iuvs_fnames)
-    df = pd.DataFrame()
-    for item in 'phase cycle mode channel time level version revision'.split():
-        df[item] = s.map(lambda x: getattr(x, item))
-    df['channel'] = df.channel.astype('category')
-    df.set_index('time', inplace=True)
-    df.sort_index(inplace=True)
-    return df
 
 
 class KindHeader(fits.Header):
