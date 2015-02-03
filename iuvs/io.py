@@ -16,6 +16,7 @@ if host.startswith('maven-iuvs-itf'):
     production = Path('/maven_iuvs/production/products')
 else:
     stage = home / 'data' / 'iuvs'
+    production = home / 'data' / 'iuvs'
 
 stagelevel1apath = stage / 'level1a'
 stagelevel1bpath = stage / 'level1b'
