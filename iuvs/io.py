@@ -119,6 +119,23 @@ class Filename:
         self.time = dt.datetime.strptime(self.timestr,
                                          '%Y%m%dT%H%M%S')
 
+    def __eq__(self, other):
+        weak_equality = ['mission', 'instrument', 'level', 'phase', 'timestr']
+        strong_equality = ['version', 'revision']
+        weak = True
+        strong = True
+        for attr in weak_equality:
+            # if any attribute is different, weak get's set to False
+            weak = weak and (getattr(self, attr) == getattr(other, attr))
+        for attr in strong_equality:
+            strong = strong and (getattr(self, attr) == getattr(other, attr))
+        if weak and strong:
+            return True
+        elif weak:
+            return 0
+        else:
+            return False
+
     def image_stats(self):
         return image_stats(self.img)
 
