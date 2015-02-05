@@ -150,6 +150,7 @@ class FitsBinTable:
 class FitsFile:
 
     def __init__(self, fname):
+        """fname needs to be absolute complete path. """
         if type(fname) == list:
             fname = fname[0]
         if fname.endswith('.gz'):
@@ -196,9 +197,17 @@ class L1AReader(FitsFile):
         'Engineering',
         ]
 
-    def __init__(self, fname):
+    def __init__(self, fname, stage=True):
+
+        # fix relative paths
+        if not os.path.isabs(fname):
+            if stage:
+                fname = str(stagelevel1bpath / fname)
+            else:
+                fname = str(productionlevel1bpath / fname)
+
+        # call super init
         super().__init__(fname)
-        print("I AM STILL HERE")
         for hdu in self.hdulist[1:]:
             name = hdu.header['EXTNAME']
             setattr(self, name+'_header', hdu.header)
@@ -219,7 +228,16 @@ class L1BReader(FitsFile):
         'Integration',
         'Engineering']
 
-    def __init__(self, fname):
+    def __init__(self, fname, stage=True):
+
+        # fix relative path
+        if not os.path.isabs(fname):
+            if stage:
+                fname = str(stagelevel1bpath / fname)
+            else:
+                fname = str(productionlevel1bpath / fname)
+
+        # call super init
         super().__init__(fname)
         for hdu in self.hdulist[1:]:
             name = hdu.header['EXTNAME']
