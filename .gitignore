@@ -55,3 +55,4 @@ target/
 .ipynb*
 *.png
 *.fits
+*.html
