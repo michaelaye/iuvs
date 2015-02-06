@@ -42,11 +42,11 @@ def get_filenames(level, pattern=None, stage=True, ext='.fits.gz'):
     return [str(i) for i in list(path.glob(pattern + ext))]
 
 
-def l1a_filenames(pattern, **kwargs):
+def l1a_filenames(pattern=None, **kwargs):
     return get_filenames('l1a', pattern=pattern, **kwargs)
 
 
-def l1b_filenames(pattern, **kwargs):
+def l1b_filenames(pattern=None, **kwargs):
     """Search for L1B filenames with patterns.
 
     <pattern> will be bracketed with '*', so needs to be correct in itself.
