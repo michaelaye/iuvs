@@ -12,7 +12,7 @@ def get_pie_plot(df, col, ax=None):
         return fig
 
 
-def plot_pie_overview(df, cols, ncols=3):
+def plot_pie_overview(df, cols, title, ncols=3):
     nrows = int(ceil(len(cols) / ncols))
     scaler = 4
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols*scaler,
@@ -20,6 +20,7 @@ def plot_pie_overview(df, cols, ncols=3):
     axes = axes.flatten()
     for ax, col in zip(axes, cols):
         get_pie_plot(df, col, ax=ax)
+    fig.suptitle(title, fontsize=20)
     return fig
 
 
