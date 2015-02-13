@@ -10,6 +10,7 @@ from . import scaling
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
+HOME = home
 
 if host.startswith('maven-iuvs-itf'):
     stage = Path('/maven_iuvs/stage/products')
@@ -89,6 +90,34 @@ def get_l1a_filename_stats():
     df.set_index('time', inplace=True)
     df.sort_index(inplace=True)
     return df
+
+
+def get_header_df(hdu, drop_comment=True):
+    """Take a FITS HDU, convert to DataFrame.
+
+    And on the way:
+    fix it,drop COMMENT and KERNEL
+    """
+    hdu.verify('silentfix')
+    header = hdu.header
+    df = pd.DataFrame(header.values(),
+                      index=header.keys())
+    return df.drop('COMMENT KERNEL'.split()) if drop_comment else df
+
+
+def save_to_hdf(df, fname, output_subdir=None):
+    """Save temporary HDF file in output folder for later concatenation."""
+    if os.path.isabs(fname):
+        basename = os.path.basename(fname)
+    else:
+        basename = fname
+    newfname = os.path.splitext(basename)[0] + '.h5'
+    path = HOME / 'output'
+    if output_subdir:
+        path = path / output_subdir
+    path = path / newfname
+    df.to_hdf(str(path), 'df', format='t')
+    return str(path)
 
 
 class Filename:
@@ -203,9 +232,9 @@ class L1AReader(FitsFile):
         # fix relative paths
         if not os.path.isabs(fname):
             if stage:
-                fname = str(stagelevel1bpath / fname)
+                fname = str(stagelevel1apath / fname)
             else:
-                fname = str(productionlevel1bpath / fname)
+                fname = str(productionlevel1apath / fname)
 
         # call super init
         super().__init__(fname)
