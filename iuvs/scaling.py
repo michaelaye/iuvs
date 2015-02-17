@@ -12,6 +12,33 @@ def addmodel(x, a):
     return a+x
 
 
+def get_corner(data, corner, size):
+    if corner == 'ul':
+        return data[:size, :size]
+    elif corner == 'ur':
+        return data[:size, -size:]
+    elif corner == 'll':
+        return data[-size:, :size]
+    elif corner == 'lr':
+        return data[-size:, -size:]
+
+
+def get_ul(data, size=10):
+    return get_corner(data, 'ul', size)
+
+
+def get_ur(data, size=10):
+    return get_corner(data, 'ur', size)
+
+
+def get_ll(data, size=10):
+    return get_corner(data, 'll', size)
+
+
+def get_lr(data, size=10):
+    return get_corner(data, 'lr', size)
+
+
 class DarkScaler:
 
     def __init__(self, data_in, data_out):
