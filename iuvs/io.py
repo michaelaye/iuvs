@@ -10,6 +10,7 @@ from . import scaling
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
+HOME = home
 
 if host.startswith('maven-iuvs-itf'):
     stage = Path('/maven_iuvs/stage/products')
@@ -42,11 +43,11 @@ def get_filenames(level, pattern=None, stage=True, ext='.fits.gz'):
     return [str(i) for i in list(path.glob(pattern + ext))]
 
 
-def l1a_filenames(pattern, **kwargs):
+def l1a_filenames(pattern=None, **kwargs):
     return get_filenames('l1a', pattern=pattern, **kwargs)
 
 
-def l1b_filenames(pattern, **kwargs):
+def l1b_filenames(pattern=None, **kwargs):
     """Search for L1B filenames with patterns.
 
     <pattern> will be bracketed with '*', so needs to be correct in itself.
@@ -91,6 +92,34 @@ def get_l1a_filename_stats():
     return df
 
 
+def get_header_df(hdu, drop_comment=True):
+    """Take a FITS HDU, convert to DataFrame.
+
+    And on the way:
+    fix it,drop COMMENT and KERNEL
+    """
+    hdu.verify('silentfix')
+    header = hdu.header
+    df = pd.DataFrame(header.values(),
+                      index=header.keys())
+    return df.drop('COMMENT KERNEL'.split()) if drop_comment else df
+
+
+def save_to_hdf(df, fname, output_subdir=None):
+    """Save temporary HDF file in output folder for later concatenation."""
+    if os.path.isabs(fname):
+        basename = os.path.basename(fname)
+    else:
+        basename = fname
+    newfname = os.path.splitext(basename)[0] + '.h5'
+    path = HOME / 'output'
+    if output_subdir:
+        path = path / output_subdir
+    path = path / newfname
+    df.to_hdf(str(path), 'df', format='t')
+    return str(path)
+
+
 class Filename:
 
     def __init__(self, fname):
@@ -120,6 +149,23 @@ class Filename:
         self.time = dt.datetime.strptime(self.timestr,
                                          '%Y%m%dT%H%M%S')
 
+    def __eq__(self, other):
+        weak_equality = ['mission', 'instrument', 'level', 'phase', 'timestr']
+        strong_equality = ['version', 'revision']
+        weak = True
+        strong = True
+        for attr in weak_equality:
+            # if any attribute is different, weak get's set to False
+            weak = weak and (getattr(self, attr) == getattr(other, attr))
+        for attr in strong_equality:
+            strong = strong and (getattr(self, attr) == getattr(other, attr))
+        if weak and strong:
+            return True
+        elif weak:
+            return 0
+        else:
+            return False
+
     def image_stats(self):
         return image_stats(self.img)
 
@@ -134,6 +180,7 @@ class FitsBinTable:
 class FitsFile:
 
     def __init__(self, fname):
+        """fname needs to be absolute complete path. """
         if type(fname) == list:
             fname = fname[0]
         if fname.endswith('.gz'):
@@ -180,9 +227,17 @@ class L1AReader(FitsFile):
         'Engineering',
         ]
 
-    def __init__(self, fname):
+    def __init__(self, fname, stage=True):
+
+        # fix relative paths
+        if not os.path.isabs(fname):
+            if stage:
+                fname = str(stagelevel1apath / fname)
+            else:
+                fname = str(productionlevel1apath / fname)
+
+        # call super init
         super().__init__(fname)
-        print("I AM STILL HERE")
         for hdu in self.hdulist[1:]:
             name = hdu.header['EXTNAME']
             setattr(self, name+'_header', hdu.header)
@@ -203,7 +258,16 @@ class L1BReader(FitsFile):
         'Integration',
         'Engineering']
 
-    def __init__(self, fname):
+    def __init__(self, fname, stage=True):
+
+        # fix relative path
+        if not os.path.isabs(fname):
+            if stage:
+                fname = str(stagelevel1bpath / fname)
+            else:
+                fname = str(productionlevel1bpath / fname)
+
+        # call super init
         super().__init__(fname)
         for hdu in self.hdulist[1:]:
             name = hdu.header['EXTNAME']

@@ -1,6 +1,7 @@
 from scipy.optimize import curve_fit
 import numpy as np
 import matplotlib.pyplot as plt
+import io
 
 
 def multimodel(x, a):
@@ -9,6 +10,33 @@ def multimodel(x, a):
 
 def addmodel(x, a):
     return a+x
+
+
+def get_corner(data, corner, size):
+    if corner == 'ul':
+        return data[:size, :size]
+    elif corner == 'ur':
+        return data[:size, -size:]
+    elif corner == 'll':
+        return data[-size:, :size]
+    elif corner == 'lr':
+        return data[-size:, -size:]
+
+
+def get_ul(data, size=10):
+    return get_corner(data, 'ul', size)
+
+
+def get_ur(data, size=10):
+    return get_corner(data, 'ur', size)
+
+
+def get_ll(data, size=10):
+    return get_corner(data, 'll', size)
+
+
+def get_lr(data, size=10):
+    return get_corner(data, 'lr', size)
 
 
 class DarkScaler:
@@ -118,3 +146,16 @@ class PolyScalerManager:
         plt.title('Mean values of fractional residual'
                   ' over polynomial rank')
         plt.ylabel('Mean value of fracional residual')
+
+
+class DarkFitter:
+    def __init__(self, fname):
+        self.fname = fname
+        l1b = io.L1BReader(fname)
+        L1BReader
+        self.l1b = l1b
+        darkout = l1b.detector_dark[-1]
+        darkin = l1b.detector_dark[-2]
+        scaler = PolyScaler(darkin, darkout)
+        scaler.do_fit()
+        self.scaler = scaler
