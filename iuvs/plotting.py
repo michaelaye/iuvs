@@ -1,7 +1,11 @@
 """some plotting utilities for IUVS"""
+import plotly.plotly as py
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 from numpy import ceil
+from plotly.graph_objs import Heatmap, Scatter, Histogram, Data
+import plotly.tools as tls
 
 
 def get_pie_plot(df, col, ax=None):
@@ -31,3 +35,31 @@ def produce_pie_plots(df, folder):
         path = os.path.join(folder, '{}__pie.png'.format(item))
         plt.savefig(path, dpi=100)
         plt.close(fig)
+
+
+def make_plotly_multiplot(img, spatial=None, spectral=None, title='No title'):
+    if spatial is None:
+        spatial = img.shape[0]//2
+    if spectral is None:
+        spectral = img.shape[1]//2
+
+    prof1 = img[spatial]
+    prof2 = img[:, spectral]
+    trace1 = Heatmap(z=np.flipud(img))
+    trace2 = Scatter(x=prof2, name='spatial profile',
+                     xaxis='x2', yaxis='y2')
+    trace3 = Scatter(y=prof1, name='spectral profile',
+                     xaxis='x3', yaxis='y3',
+                     showlegend=False)
+
+    trace4 = Histogram(x=img.ravel(), name='image histogram',
+                       xaxis='x4', yaxis='y4',
+                       showlegend=False)
+
+    data = Data([trace1, trace2, trace3, trace4])
+
+    fig = tls.make_subplots(rows=2, cols=2, show)
+    fig['data'] += data
+    fig['layout'].update(title=title)
+    return fig
+
