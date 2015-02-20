@@ -63,6 +63,9 @@ class DarkScaler:
     def fractional(self):
         return self.residual / self.data_out
 
+    def apply_fit(self, in_):
+        return self.model(in_, self.p)
+
 
 class AddScaler(DarkScaler):
 
