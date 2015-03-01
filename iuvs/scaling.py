@@ -39,6 +39,8 @@ def get_lr(data, size=10):
     return get_corner(data, 'lr', size)
 
 
+
+
 class DarkScaler:
 
     def __init__(self, data_in, data_out):
@@ -155,10 +157,10 @@ class DarkFitter:
     def __init__(self, fname):
         self.fname = fname
         l1b = io.L1BReader(fname)
-        L1BReader
         self.l1b = l1b
         darkout = l1b.detector_dark[-1]
         darkin = l1b.detector_dark[-2]
         scaler = PolyScaler(darkin, darkout)
         scaler.do_fit()
         self.scaler = scaler
+
