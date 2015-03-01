@@ -24,7 +24,7 @@ setup(
     version = "0.1beta",
     packages = find_packages(),
 
-    # install_requires = ['pandas>='+pandas_version, 'astropy'],
+    install_requires = ['astropy'],
     # tests_require = ['pytest'],
 
     cmdclass = {'test': PyTest},
