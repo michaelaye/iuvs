@@ -125,3 +125,87 @@ class L1BImageOperator(object):
         return dataitems
 
 
+from moviepy.video.io.bindings import mplfig_to_npimage
+import moviepy.editor as mpy
+
+def make_spectogram_anim(l1b, data_attr, fps):
+    """Create animation out of `data_attr` spectrograms.
+
+    Parameters
+    ==========
+    l1b: <io.L1BReader>
+    data_attr: <string>
+        Name of attribute of the io.L1BReader object that should be
+        animated.
+    fps: <int>
+        Frame rate of resulting animation
+
+    Returns
+    =======
+    Produces an .mp4 and .mp4 in current directory, with name
+    `data_attr`.mp4/.gif
+    """
+    data = getattr(l1b, data_attr)
+    fig_mpl, ax = plt.subplots(1, figsize=(10,6), facecolor='white')
+    xx = l1b.wavelengths[0]
+    zz = lambda x: np.log(data[x])
+    ax.set_title(data_attr)
+    ax.set_xlim(xx[0], xx[-1])
+    ax.axis('off')
+    im = ax.imshow(zz(0), cmap='binary')
+    
+    duration = len(data) / fps
+    
+    def make_frame_mpl(t):
+        index = int(t*fps)
+        im.set_data( zz(index))  # <= Update the curve
+        ax.set_title('Spectogram {} out of {}'.format(index+1, len(data)))
+        return mplfig_to_npimage(fig_mpl) # RGB image of the figure
+
+    animation =mpy.VideoClip(make_frame_mpl, duration=duration)
+    animation.write_videofile(data_attr+".mp4", fps=fps)
+    animation.write_gif(data_attr+'.gif', fps=fps)
+
+
+def make_line_profile_anim(l1b, data_attr, fps, spatial=None):
+    """Create animation out of `data_attr` line profiles at `spatial` pixel.
+
+    Parameters
+    ==========
+    l1b: <io.L1BReader>
+    data_attr: <string>
+        Name of attribute of the io.L1BReader object that should be
+        animated.
+    fps: <int>
+        Framerate of resulting animation
+    spatial: <int>
+        Pixel index location for profile. Default is central pixel of
+        spatial axis.
+    
+    Returns
+    =======
+    Produces an .mp4 and .mp4 in current directory, with name
+    `data_attr`.mp4/.gif
+    """
+    data = getattr(l1b, data_attr)
+    if spatial is None:
+        spatial = data.shape[1]//2
+    fig_mpl, ax = plt.subplots(1, figsize=(10,6), facecolor='white')
+    xx = l1b.wavelengths[0]
+    zz = lambda x: data[x][spatial]
+    ax.set_title(data_attr)
+    ax.set_xlim(xx[0], xx[-1])
+    line, = ax.semilogy(xx, zz(0), lw=3)
+    
+    duration = len(data) / fps
+    
+    def make_frame_mpl(t):
+        index = int(t*fps)
+        line.set_ydata(zz(index))
+        ax.set_title('t: {}, Profile {} at spatial {} out of {}'
+                     .format(t, index+1, spatial, len(data)))
+        return mplfig_to_npimage(fig_mpl)
+    
+    animation = mpy.VideoClip(make_frame_mpl, duration=duration)
+    animation.write_videofile(data_attr+'_profiles.mp4', fps=fps)
+    animation.write_gif(data_attr+'_profiles.gif', fps=fps)
