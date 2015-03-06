@@ -227,6 +227,56 @@ class FitsFile:
         time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
         return time
 
+    def get_integration(self, data_attr, integration):
+        data = getattr(self, data_attr)
+        if data.ndim == 3:
+            if integration is None:
+                print("More than 1 integration present.\n"
+                      "Need to provide integration index.")
+                return
+            else:
+                spec = data[integration]
+        else:
+            if integration is not None:
+                print("Data is only 2D, no integration index required.")
+            spec = data
+        return spec
+
+    def plot_some_spectrogram(self, spec, title, ax=None, cmap=None, 
+                              cbar=True, log=True):
+        if log:
+            spec = np.log10(spec)
+        if cmap is None:
+            cmap = 'binary'
+
+        if ax is None:
+            fig, ax = plt.subplots()  # figsize=(8, 6))
+            fig.suptitle(self.plottitle, fontsize=16)
+        waves = self.wavelengths[0]
+        im = ax.imshow(spec, cmap=cmap) 
+        ax.set_xlim(waves[0], waves[-1])
+        ax.set_title(title)
+        ax.set_xlabel("Wavelength [nm]")
+        ax.set_ylabel('Spatial pixels')
+        ax.grid('off')
+        if cbar:
+            cb = plt.colorbar(im, ax=ax)
+            if log:
+                label = 'log(DN)'
+            else:
+                label = 'DN'
+            cb.set_label('log(DN)', fontsize=14, rotation=0)
+        return ax
+
+    def plot_img_spectrogram(self,
+                             integration=None, ax=None, 
+                             cmap=None, cbar=True, log=True):
+        spec = self.get_integration('img', integration)
+        title = ("Primary spectrogram, integration {} out of {}"
+                 .format(integration, self.img_header['NAXIS3']))
+        return self.plot_some_spectrogram(spec, title,
+                                          ax, cmap, cbar, log)
+
 
 class L1AReader(FitsFile):
 
@@ -288,51 +338,13 @@ class L1BReader(FitsFile):
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
         self.darks_interpolated = self.background_dark
 
-    def get_integration(self, data_attr, integration):
-        data = getattr(self, data_attr)
-        if data.ndim == 3:
-            if integration is None:
-                print("More than 1 integration present.\n"
-                      "Need to provide integration index.")
-                return
-            else:
-                spec = data[integration]
-        else:
-            if integration is not None:
-                print("Data is only 2D, no integration index required.")
-            spec = data
-        return spec
-
     def plot_raw_spectrogram(self, integration=None, ax=None, 
                             cmap=None, cbar=True, log=True):
         spec = self.get_integration('detector_raw', integration)
-
-        if log:
-            spec = np.log10(spec)
-        if cmap is None:
-            cmap = 'binary'
-
-        if ax is None:
-            fig, ax = plt.subplots()  # figsize=(8, 6))
-            fig.suptitle(self.plottitle, fontsize=16)
-        im = ax.imshow(spec, cmap=cmap, extent=(self.wavelengths[0][0],
-                                                self.wavelengths[0][-1],
-                                                len(spec),
-                                                0)
-                      )
-        ax.set_title("Spectrogram, integration {} out of {}"
-                     .format(integration, self.img_header['NAXIS3']))
-        ax.set_xlabel("Wavelength [nm]")
-        ax.set_ylabel('Spatial pixels')
-        ax.grid('off')
-        if cbar:
-            cb = plt.colorbar(im, ax=ax)
-            if log:
-                label = 'log(DN)'
-            else:
-                label = 'DN'
-            cb.set_label('log(DN)', fontsize=14, rotation=0)
-        return ax
+        title = ("Raw light spectrogram, integration {} out of {}"
+                 .format(integration, self.img_header['NAXIS3']))
+        return self.plot_some_spectrogram(spec, title, ax,
+                                          cmap, cbar, log)
 
     def plot_raw_profile(self, integration=None, spatial=None, ax=None,
                          log=True, **kwargs):
