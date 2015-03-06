@@ -326,11 +326,16 @@ class L1BReader(FitsFile):
         ax.set_ylabel('Spatial pixels')
         ax.grid('off')
         if cbar:
-            plt.colorbar(im, ax=ax)
+            cb = plt.colorbar(im, ax=ax)
+            if log:
+                label = 'log(DN)'
+            else:
+                label = 'DN'
+            cb.set_label('log(DN)', fontsize=14, rotation=0)
         return ax
 
     def plot_raw_profile(self, integration=None, spatial=None, ax=None,
-                         log=False, **kwargs):
+                         log=True, **kwargs):
         if spatial is None:
             # if no spatial bin given, take the middle one
             spatial = self.img.shape[1]//2
@@ -353,16 +358,20 @@ class L1BReader(FitsFile):
         ax.set_ylabel("DN")
         return ax
 
-    def plot_raw_overview(self, integration=None):
-        fig, axes = plt.subplots(nrows=2, sharex=True)
+    def plot_raw_overview(self, integration=None, log=True):
+        fig, axes = plt.subplots(nrows=2)
         fig.suptitle(self.plottitle, fontsize=16)
         ax = self.plot_raw_spectrogram(integration, 
                                       ax=axes[0],
                                       cbar=False)
-        ax.set_xlabel('')
-        self.plot_raw_profile(integration, ax=axes[1], log=True)
+        self.plot_raw_profile(integration, ax=axes[1], log=log)
         im = ax.get_images()[0]
-        plt.colorbar(im, ax=axes.tolist())
+        cb = plt.colorbar(im, ax=axes.tolist())
+        if log:
+            label = 'log(DN)'
+        else:
+            label = 'DN'
+        cb.set_label(label, fontsize=14, rotation=0)
 
     def get_light_and_dark(self, integration):
         light = self.get_integration('detector_raw', integration)
