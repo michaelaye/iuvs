@@ -6,7 +6,7 @@ import pandas as pd
 import os
 from pathlib import Path
 import socket
-from . import scaling
+from iuvs import scaling
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -191,6 +191,14 @@ class FitsFile:
         self.hdulist = fits.open(infile)
 
     @property
+    def int_time(self):
+        return self.img_header['INT_TIME']
+
+    @property 
+    def wavelengths(self):
+        return self.Observation.field(18)[0]
+
+    @property
     def img_header(self):
         imgdata = self.hdulist[0]
         return imgdata.header
@@ -199,15 +207,15 @@ class FitsFile:
     def img(self):
         return self.hdulist[0].data
 
-    def plot_img_data(self, ax=None):
-        if ax is None:
-            fig, ax = plt.subplots()  # figsize=(8, 6))
-        ax.imshow(self.img)
-        ax.set_title("{channel}, {phase}, {int}"
-                     .format(channel=self.fname.channel,
-                             phase=self.fname.phase,
-                             int=self.img_header['INT_TIME']))
-        return ax
+    @property
+    def plotfname(self):
+        return os.path.basename(self.fname)[12:-16]
+
+    @property
+    def plottitle(self):
+        title = "{fname}, INT_TIME: {int}".format(fname=self.plotfname,
+                                        int=self.int_time)
+        return title
 
     @property
     def capture(self):
@@ -278,14 +286,75 @@ class L1BReader(FitsFile):
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
         self.darks_interpolated = self.background_dark
 
-    def plot_img_data(self, ax=None):
-        time = self.capture
+    def get_spectrogram(self, integration):
+        data = self.detector_raw
+        if data.ndim == 3:
+            if integration is None:
+                print("More than 1 integration present.\n"
+                      "Need to provide integration index.")
+                return
+            else:
+                spec = data[integration]
+        else:
+            if integration is not None:
+                print("Data is only 2D, no integration index required.")
+            spec = data
+        return spec
+
+    def plot_raw_spectrogram(self, integration=None, ax=None, 
+                            cmap=None, cbar=True):
+        spec = self.get_spectrogram(integration)
+
+        if cmap is None:
+            cmap = 'binary'
+
         if ax is None:
             fig, ax = plt.subplots()  # figsize=(8, 6))
-        ax.imshow(self.img)
-        ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
-                                            xuv=self.img_header['XUV']))
+            fig.suptitle(self.plottitle, fontsize=16)
+        im = ax.imshow(spec, cmap=cmap, extent=(self.wavelengths[0][0],
+                                                self.wavelengths[0][-1],
+                                                len(spec),
+                                                0)
+                      )
+        ax.set_title("Spectrogram, integration: {}".format(integration))
+        ax.set_xlabel("Wavelength [nm]")
+        ax.set_ylabel('Spatial pixels')
+        if cbar:
+            plt.colorbar(im, ax=ax)
         return ax
+
+    def plot_raw_profile(self, integration=None, spatial=None, ax=None,
+                         log=False, **kwargs):
+        if spatial is None:
+            # if no spatial bin given, take the middle one
+            spatial = self.img.shape[1]//2
+
+        spec = self.get_spectrogram(integration)
+
+        if ax is None:
+            fig, ax = plt.subplots()
+            fig.suptitle(self.plottitle, fontsize=16)
+        if log:
+            func = ax.semilogy
+        else:
+            func = ax.plot
+        func(self.wavelengths[spatial], spec[spatial], **kwargs)
+        ax.set_xlim((self.wavelengths[spatial][0],
+                     self.wavelengths[spatial][-1]))
+        ax.set_title("Profile at spatial: {}, integration: {}"
+                     .format(spatial, integration))
+        ax.set_xlabel("Wavelength [nm]")
+        return ax
+
+    def plot_raw_overview(self, integration=None):
+        fig, axes = plt.subplots(nrows=2, sharex=True)
+        fig.suptitle(self.plottitle, fontsize=16)
+        ax = self.plot_raw_spectrogram(integration, 
+                                      ax=axes[0],
+                                      cbar=False)
+        self.plot_raw_profile(integration, ax=axes[1])
+        im = ax.get_images()[0]
+        plt.colorbar(im, ax=axes.tolist())
 
 
 class KindHeader(fits.Header):
@@ -376,3 +445,21 @@ class DarkWriter:
 
     def write(self):
         self.hdulist.writeto(self.outfname, clobber=self.clobber)
+
+
+def some_l1a():
+    try:
+        fname = l1a_filenames()[0]
+    except IndexError:
+        print("No L1A files found.")
+        return
+    return L1AReader(fname)
+
+
+def some_l1b():
+    try:
+        fname = l1b_filenames()[0]
+    except IndexError:
+        print("No L1B files found.")
+        return
+    return L1BReader(fname)
