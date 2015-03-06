@@ -21,7 +21,7 @@ class PyTest(TestCommand):
 
 setup(
     name = "IUVS",
-    version = "0.1beta",
+    version = "0.2",
     packages = find_packages(),
 
     install_requires = ['astropy'],
