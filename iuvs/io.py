@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 import socket
 from iuvs import scaling
+import numpy as np
+
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -286,8 +288,8 @@ class L1BReader(FitsFile):
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
         self.darks_interpolated = self.background_dark
 
-    def get_spectrogram(self, integration):
-        data = self.detector_raw
+    def get_integration(self, data_attr, integration):
+        data = getattr(self, data_attr)
         if data.ndim == 3:
             if integration is None:
                 print("More than 1 integration present.\n"
@@ -302,9 +304,11 @@ class L1BReader(FitsFile):
         return spec
 
     def plot_raw_spectrogram(self, integration=None, ax=None, 
-                            cmap=None, cbar=True):
-        spec = self.get_spectrogram(integration)
+                            cmap=None, cbar=True, log=True):
+        spec = self.get_integration('detector_raw', integration)
 
+        if log:
+            spec = np.log10(spec)
         if cmap is None:
             cmap = 'binary'
 
@@ -316,9 +320,11 @@ class L1BReader(FitsFile):
                                                 len(spec),
                                                 0)
                       )
-        ax.set_title("Spectrogram, integration: {}".format(integration))
+        ax.set_title("Spectrogram, integration {} out of {}"
+                     .format(integration, self.img_header['NAXIS3']))
         ax.set_xlabel("Wavelength [nm]")
         ax.set_ylabel('Spatial pixels')
+        ax.grid('off')
         if cbar:
             plt.colorbar(im, ax=ax)
         return ax
@@ -329,7 +335,7 @@ class L1BReader(FitsFile):
             # if no spatial bin given, take the middle one
             spatial = self.img.shape[1]//2
 
-        spec = self.get_spectrogram(integration)
+        spec = self.get_integration('detector_raw', integration)
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -341,9 +347,10 @@ class L1BReader(FitsFile):
         func(self.wavelengths[spatial], spec[spatial], **kwargs)
         ax.set_xlim((self.wavelengths[spatial][0],
                      self.wavelengths[spatial][-1]))
-        ax.set_title("Profile at spatial: {}, integration: {}"
-                     .format(spatial, integration))
+        ax.set_title("Profile at spatial: {}, integration {} of {}"
+                     .format(spatial, integration, self.img_header['NAXIS3']))
         ax.set_xlabel("Wavelength [nm]")
+        ax.set_ylabel("DN")
         return ax
 
     def plot_raw_overview(self, integration=None):
@@ -352,9 +359,15 @@ class L1BReader(FitsFile):
         ax = self.plot_raw_spectrogram(integration, 
                                       ax=axes[0],
                                       cbar=False)
-        self.plot_raw_profile(integration, ax=axes[1])
+        ax.set_xlabel('')
+        self.plot_raw_profile(integration, ax=axes[1], log=True)
         im = ax.get_images()[0]
         plt.colorbar(im, ax=axes.tolist())
+
+    def get_light_and_dark(self, integration):
+        light = self.get_integration('detector_raw', integration)
+        dark = self.get_integration('detector_dark', integration)
+        return light, dark
 
 
 class KindHeader(fits.Header):
