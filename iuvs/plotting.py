@@ -6,7 +6,7 @@ from numpy import ceil
 from plotly.graph_objs import Heatmap, Scatter, Histogram, Data,\
     Annotation, Annotations, Font, Marker
 import plotly.tools as tls
-from . import scaling
+from iuvs import scaling
 
 
 def get_pie_plot(df, col, ax=None):
