@@ -3,9 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from numpy import ceil
-from plotly.graph_objs import Heatmap, Scatter, Histogram, Data,\
-    Annotation, Annotations, Font, Marker
-import plotly.tools as tls
+try:
+    from plotly.graph_objs import Heatmap, Scatter, Histogram, Data,\
+        Annotation, Annotations, Font, Marker
+    import plotly.tools as tls
+except ImportError:
+    print("Can't import plotly")
 from iuvs import scaling
 
 

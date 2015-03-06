@@ -371,6 +371,7 @@ class L1BReader(FitsFile):
         return ax
 
     def plot_raw_overview(self, integration=None, log=True):
+        "Plot overview of spectrogram and profile at index `integration`."
         fig, axes = plt.subplots(nrows=2)
         fig.suptitle(self.plottitle, fontsize=16)
         ax = self.plot_raw_spectrogram(integration, 
