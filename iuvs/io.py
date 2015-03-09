@@ -193,6 +193,16 @@ class FitsFile:
         self.hdulist = fits.open(infile)
 
     @property
+    def scaling_factor(self):
+        """Return factor to get DN/s.
+
+        Because the binning returns just summed up values, one must
+        also include the binning as a scaling factor.
+        """
+        bin_scale = self.img_header['SPA_SIZE'] * self.img_header['SPE_SIZE']
+        return bin_scale * self.int_time
+
+    @property
     def int_time(self):
         return self.img_header['INT_TIME']
 
@@ -208,6 +218,10 @@ class FitsFile:
     @property
     def img(self):
         return self.hdulist[0].data
+
+    @property
+    def scaled_img(self):
+        return self.img / self.scaling_factor
 
     @property
     def plotfname(self):
@@ -243,29 +257,34 @@ class FitsFile:
         return spec
 
     def plot_some_spectrogram(self, spec, title, ax=None, cmap=None, 
-                              cbar=True, log=True):
+                              cbar=True, log=False, showaxis=True,
+                              **kwargs):
         if log:
             spec = np.log10(spec)
         if cmap is None:
             cmap = 'binary'
 
         if ax is None:
-            fig, ax = plt.subplots()  # figsize=(8, 6))
+            fig, ax = plt.subplots()
             fig.suptitle(self.plottitle, fontsize=16)
         waves = self.wavelengths[0]
-        im = ax.imshow(spec, cmap=cmap) 
-        ax.set_xlim(waves[0], waves[-1])
+        im = ax.imshow(spec, cmap=cmap, extent=(waves[0], waves[-1],
+                                                len(spec), 0),
+                       **kwargs) 
         ax.set_title(title)
         ax.set_xlabel("Wavelength [nm]")
         ax.set_ylabel('Spatial pixels')
-        ax.grid('off')
+        if not showaxis:
+            ax.grid('off')
         if cbar:
             cb = plt.colorbar(im, ax=ax)
             if log:
-                label = 'log(DN)'
+                label = 'log(DN/s)'
             else:
-                label = 'DN'
-            cb.set_label('log(DN)', fontsize=14, rotation=0)
+                label = 'DN/s'
+            cb.set_label(label, fontsize=14, rotation=0)
+        self.current_ax = ax
+        self.current_spec = spec
         return ax
 
     def plot_img_spectrogram(self,
@@ -338,16 +357,26 @@ class L1BReader(FitsFile):
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
         self.darks_interpolated = self.background_dark
 
+    @property
+    def scaled_raw(self):
+        return self.detector_raw / self.scaling_factor
+
+    @property
+    def scaled_dark(self):
+        return self.detector_dark / self.scaling_factor
+
     def plot_raw_spectrogram(self, integration=None, ax=None, 
-                            cmap=None, cbar=True, log=True):
+                            cmap=None, cbar=True, log=False,
+                            **kwargs):
         spec = self.get_integration('detector_raw', integration)
         title = ("Raw light spectrogram, integration {} out of {}"
                  .format(integration, self.img_header['NAXIS3']))
-        return self.plot_some_spectrogram(spec, title, ax,
-                                          cmap, cbar, log)
+        return self.plot_some_spectrogram(spec / self.scaling_factor, 
+                                          title, ax,
+                                          cmap, cbar, log, **kwargs)
 
     def plot_raw_profile(self, integration=None, spatial=None, ax=None,
-                         log=True, **kwargs):
+                         log=False, **kwargs):
         if spatial is None:
             # if no spatial bin given, take the middle one
             spatial = self.img.shape[1]//2
@@ -361,22 +390,25 @@ class L1BReader(FitsFile):
             func = ax.semilogy
         else:
             func = ax.plot
-        func(self.wavelengths[spatial], spec[spatial], **kwargs)
+        func(self.wavelengths[spatial], 
+             spec[spatial] / self.scaling_factor, **kwargs)
         ax.set_xlim((self.wavelengths[spatial][0],
                      self.wavelengths[spatial][-1]))
         ax.set_title("Profile at spatial: {}, integration {} of {}"
                      .format(spatial, integration, self.img_header['NAXIS3']))
         ax.set_xlabel("Wavelength [nm]")
-        ax.set_ylabel("DN")
+        if log:
+            ax.set_ylabel("log(DN/s)")
+        else:
+            ax.set_ylabel('DN/s')
         return ax
 
-    def plot_raw_overview(self, integration=None, log=True):
+    def plot_raw_overview(self, integration=None, log=False):
         "Plot overview of spectrogram and profile at index `integration`."
         fig, axes = plt.subplots(nrows=2)
         fig.suptitle(self.plottitle, fontsize=16)
-        ax = self.plot_raw_spectrogram(integration, 
-                                      ax=axes[0],
-                                      cbar=False)
+        ax = self.plot_raw_spectrogram(integration, ax=axes[0],
+                                      cbar=False, log=log)
         self.plot_raw_profile(integration, ax=axes[1], log=log)
         im = ax.get_images()[0]
         cb = plt.colorbar(im, ax=axes.tolist())
