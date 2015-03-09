@@ -287,6 +287,33 @@ class FitsFile:
         self.current_spec = spec
         return ax
 
+    def plot_some_profile(self, spec, title, spatial=None, ax=None,
+                         log=False, **kwargs):
+        if spatial is None:
+            # if no spatial bin given, take the middle one
+            spatial = self.img.shape[1]//2
+
+        if ax is None:
+            fig, ax = plt.subplots()
+            fig.suptitle(self.plottitle, fontsize=16)
+        if log:
+            func = ax.semilogy
+        else:
+            func = ax.plot
+
+        func(self.wavelengths[spatial], spec[spatial], **kwargs)
+
+        ax.set_xlim((self.wavelengths[spatial][0],
+                     self.wavelengths[spatial][-1]))
+        ax.set_title(title)
+        ax.set_xlabel("Wavelength [nm]")
+        if log:
+            ax.set_ylabel("log(DN/s)")
+        else:
+            ax.set_ylabel('DN/s')
+        return ax
+
+
     def plot_img_spectrogram(self,
                              integration=None, ax=None, 
                              cmap=None, cbar=True, log=True):
@@ -368,40 +395,19 @@ class L1BReader(FitsFile):
     def plot_raw_spectrogram(self, integration=None, ax=None, 
                             cmap=None, cbar=True, log=False,
                             **kwargs):
-        spec = self.get_integration('detector_raw', integration)
+        spec = self.get_integration('scaled_raw', integration)
         title = ("Raw light spectrogram, integration {} out of {}"
                  .format(integration, self.img_header['NAXIS3']))
-        return self.plot_some_spectrogram(spec / self.scaling_factor, 
-                                          title, ax,
+        return self.plot_some_spectrogram(spec, title, ax,
                                           cmap, cbar, log, **kwargs)
 
     def plot_raw_profile(self, integration=None, spatial=None, ax=None,
                          log=False, **kwargs):
-        if spatial is None:
-            # if no spatial bin given, take the middle one
-            spatial = self.img.shape[1]//2
-
-        spec = self.get_integration('detector_raw', integration)
-
-        if ax is None:
-            fig, ax = plt.subplots()
-            fig.suptitle(self.plottitle, fontsize=16)
-        if log:
-            func = ax.semilogy
-        else:
-            func = ax.plot
-        func(self.wavelengths[spatial], 
-             spec[spatial] / self.scaling_factor, **kwargs)
-        ax.set_xlim((self.wavelengths[spatial][0],
-                     self.wavelengths[spatial][-1]))
-        ax.set_title("Profile at spatial: {}, integration {} of {}"
+        spec = self.get_integration('scaled_raw', integration)
+        title = ("Profile at spatial: {}, integration {} of {}"
                      .format(spatial, integration, self.img_header['NAXIS3']))
-        ax.set_xlabel("Wavelength [nm]")
-        if log:
-            ax.set_ylabel("log(DN/s)")
-        else:
-            ax.set_ylabel('DN/s')
-        return ax
+        return self.plot_some_profile(spec, title, spatial,
+                                      ax, log, **kwargs)
 
     def plot_raw_overview(self, integration=None, log=False):
         "Plot overview of spectrogram and profile at index `integration`."
