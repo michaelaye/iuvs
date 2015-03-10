@@ -258,6 +258,7 @@ class FitsFile:
 
     def plot_some_spectrogram(self, spec, title, ax=None, cmap=None, 
                               cbar=True, log=False, showaxis=True,
+                              min_=None, max_=None,
                               **kwargs):
         if log:
             spec = np.log10(spec)
@@ -287,8 +288,14 @@ class FitsFile:
         self.current_spec = spec
         return ax
 
-    def plot_some_profile(self, spec, title, spatial=None, ax=None,
-                         log=False, **kwargs):
+    def plot_some_profile(self, data_attr, integration,
+                          spatial=None, ax=None,
+                          log=False, **kwargs):
+        spec = self.get_integration(data_attr, integration)
+        title = ("Profile of {} at spatial: {}, integration {} of {}"
+                 .format(data_attr, spatial, integration, 
+                         self.img_header['NAXIS3']))
+
         if spatial is None:
             # if no spatial bin given, take the middle one
             spatial = self.img.shape[1]//2
@@ -401,13 +408,14 @@ class L1BReader(FitsFile):
         return self.plot_some_spectrogram(spec, title, ax,
                                           cmap, cbar, log, **kwargs)
 
-    def plot_raw_profile(self, integration=None, spatial=None, ax=None,
-                         log=False, **kwargs):
-        spec = self.get_integration('scaled_raw', integration)
-        title = ("Profile at spatial: {}, integration {} of {}"
-                     .format(spatial, integration, self.img_header['NAXIS3']))
-        return self.plot_some_profile(spec, title, spatial,
-                                      ax, log, **kwargs)
+    def plot_dark_spectogram(self, integration=None, ax=None,
+                             cmap=None, cbar=True, log=False,
+                             **kwargs):
+        dark = self.get_integration('scaled_dark', integration)
+        title = ("Dark spectogram, integration {} out of {}"
+                 .format(integration, self.img_header['NAXIS3']))
+        return self.plot_some_spectrogram(dark, title, ax,
+                                          cmap, cbar, log, **kwargs)
 
     def plot_raw_overview(self, integration=None, log=False):
         "Plot overview of spectrogram and profile at index `integration`."
@@ -415,7 +423,8 @@ class L1BReader(FitsFile):
         fig.suptitle(self.plottitle, fontsize=16)
         ax = self.plot_raw_spectrogram(integration, ax=axes[0],
                                       cbar=False, log=log)
-        self.plot_raw_profile(integration, ax=axes[1], log=log)
+        self.plot_some_profile('detector_raw', integration, 
+                                ax=axes[1], log=log)
         im = ax.get_images()[0]
         cb = plt.colorbar(im, ax=axes.tolist())
         if log:
@@ -423,6 +432,12 @@ class L1BReader(FitsFile):
         else:
             label = 'DN'
         cb.set_label(label, fontsize=14, rotation=0)
+
+    def plot_raw_profile(self, integration):
+        return self.plot_some_profile('detector_raw', integration)
+
+    def plot_dark_profile(self, integration):
+        return self.plot_some_profile('detector_dark', integration)
 
     def get_light_and_dark(self, integration):
         light = self.get_integration('detector_raw', integration)
