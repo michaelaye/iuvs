@@ -24,3 +24,7 @@ def l1b_summary(stage=True):
         return get_summary_df(stagel1bsummary)
     else:
         return get_summary_df(prodl1bsummary)
+
+
+def get_full_frames(df):
+    return df[(df.NX == 1024) & (df.NY == 1024)]
