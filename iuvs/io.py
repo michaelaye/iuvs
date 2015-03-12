@@ -428,10 +428,14 @@ class L1BReader(FitsFile):
         im = ax.get_images()[0]
         cb = plt.colorbar(im, ax=axes.tolist())
         if log:
-            label = 'log(DN)'
+            label = 'log(DN/s)'
         else:
-            label = 'DN'
+            label = 'DN/s'
         cb.set_label(label, fontsize=14, rotation=0)
+        if save_token is not None:
+            fname = "{}_{}.png".format(self.plottitle,
+                                       save_token)
+            fig.savefig(os.path.join(plotfolder, fname), dpi=150)
 
     def plot_raw_profile(self, integration):
         return self.plot_some_profile('detector_raw', integration)
