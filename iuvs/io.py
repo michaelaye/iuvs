@@ -6,7 +6,9 @@ import pandas as pd
 import os
 from pathlib import Path
 import socket
-from . import scaling
+from iuvs import scaling
+import numpy as np
+
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -23,6 +25,9 @@ stagelevel1apath = stage / 'level1a'
 stagelevel1bpath = stage / 'level1b'
 productionlevel1apath = production / 'level1a'
 productionlevel1bpath = production / 'level1b'
+
+mycmap = 'YlGnBu_r'
+plotfolder = HOME / 'Dropbox/src/iuvs/notebooks/plots'
 
 
 def get_filenames(level, pattern=None, stage=True, ext='.fits.gz'):
@@ -191,6 +196,24 @@ class FitsFile:
         self.hdulist = fits.open(infile)
 
     @property
+    def scaling_factor(self):
+        """Return factor to get DN/s.
+
+        Because the binning returns just summed up values, one must
+        also include the binning as a scaling factor.
+        """
+        bin_scale = self.img_header['SPA_SIZE'] * self.img_header['SPE_SIZE']
+        return bin_scale * self.int_time
+
+    @property
+    def int_time(self):
+        return self.img_header['INT_TIME']
+
+    @property
+    def wavelengths(self):
+        return self.Observation.field(18)[0]
+
+    @property
     def img_header(self):
         imgdata = self.hdulist[0]
         return imgdata.header
@@ -199,15 +222,19 @@ class FitsFile:
     def img(self):
         return self.hdulist[0].data
 
-    def plot_img_data(self, ax=None):
-        if ax is None:
-            fig, ax = plt.subplots()  # figsize=(8, 6))
-        ax.imshow(self.img)
-        ax.set_title("{channel}, {phase}, {int}"
-                     .format(channel=self.fname.channel,
-                             phase=self.fname.phase,
-                             int=self.img_header['INT_TIME']))
-        return ax
+    @property
+    def scaled_img(self):
+        return self.img / self.scaling_factor
+
+    @property
+    def plotfname(self):
+        return os.path.basename(self.fname)[12:-16]
+
+    @property
+    def plottitle(self):
+        title = "{fname}, INT_TIME: {int}".format(fname=self.plotfname,
+                                                  int=self.int_time)
+        return title
 
     @property
     def capture(self):
@@ -216,6 +243,97 @@ class FitsFile:
         cleaned = string[:-3]+'0'
         time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
         return time
+
+    def get_integration(self, data_attr, integration):
+        data = getattr(self, data_attr)
+        if data.ndim == 3:
+            if integration is None:
+                print("More than 1 integration present.\n"
+                      "Need to provide integration index.")
+                return
+            else:
+                spec = data[integration]
+        else:
+            if integration is not None:
+                print("Data is only 2D, no integration index required.")
+            spec = data
+        return spec
+
+    def plot_some_spectrogram(self, spec, title, ax=None, cmap=None,
+                              cbar=True, log=False, showaxis=True,
+                              min_=None, max_=None,
+                              **kwargs):
+        if log:
+            spec = np.log10(spec)
+        if cmap is None:
+            cmap = mycmap
+
+        if ax is None:
+            fig, ax = plt.subplots()
+            fig.suptitle(self.plottitle, fontsize=16)
+        waves = self.wavelengths[0]
+        im = ax.imshow(spec, cmap=cmap, extent=(waves[0], waves[-1],
+                                                len(spec), 0),
+                       **kwargs)
+        ax.set_title(title)
+        ax.set_xlabel("Wavelength [nm]")
+        ax.set_ylabel('Spatial pixels')
+        if not showaxis:
+            ax.grid('off')
+        if cbar:
+            cb = plt.colorbar(im, ax=ax)
+            if log:
+                label = 'log(DN/s)'
+            else:
+                label = 'DN/s'
+            cb.set_label(label, fontsize=14, rotation=0)
+        self.current_ax = ax
+        self.current_spec = spec
+        return ax
+
+    def plot_some_profile(self, data_attr, integration,
+                          spatial=None, ax=None, scale=False,
+                          log=False, **kwargs):
+        spec = self.get_integration(data_attr, integration)
+        if scale:
+            spec = spec / self.scaling_factor
+        if spatial is None:
+            # if no spatial bin given, take the middle one
+            spatial = self.img.shape[1]//2
+
+        title = ("Profile of {} at spatial: {}, integration {} of {}"
+                 .format(data_attr, spatial, integration,
+                         self.img_header['NAXIS3']))
+
+
+        if ax is None:
+            fig, ax = plt.subplots()
+            fig.suptitle(self.plottitle, fontsize=16)
+        if log:
+            func = ax.semilogy
+        else:
+            func = ax.plot
+
+        func(self.wavelengths[spatial], spec[spatial], **kwargs)
+
+        ax.set_xlim((self.wavelengths[spatial][0],
+                     self.wavelengths[spatial][-1]))
+        ax.set_title(title)
+        ax.set_xlabel("Wavelength [nm]")
+        if log:
+            ax.set_ylabel("log(DN/s)")
+        else:
+            ax.set_ylabel('DN/s')
+        return ax
+
+    def plot_img_spectrogram(self,
+                             integration=None, ax=None,
+                             cmap=None, cbar=True, log=True):
+        spec = self.get_integration('img', integration)
+        title = ("Primary spectrogram, integration {} out of {}"
+                 .format(integration, self.img_header['NAXIS3']))
+        return self.plot_some_spectrogram(spec, title,
+                                          ax, cmap, cbar, log)
 
 
 class L1AReader(FitsFile):
@@ -278,14 +396,67 @@ class L1BReader(FitsFile):
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
         self.darks_interpolated = self.background_dark
 
-    def plot_img_data(self, ax=None):
-        time = self.capture
-        if ax is None:
-            fig, ax = plt.subplots()  # figsize=(8, 6))
-        ax.imshow(self.img)
-        ax.set_title("{xuv}, {time}".format(time=time.isoformat(),
-                                            xuv=self.img_header['XUV']))
-        return ax
+    @property
+    def scaled_raw(self):
+        return self.detector_raw / self.scaling_factor
+
+    @property
+    def scaled_dark(self):
+        return self.detector_dark / self.scaling_factor
+
+    def plot_raw_spectrogram(self, integration=None, ax=None,
+                             cmap=None, cbar=True, log=False,
+                             **kwargs):
+        spec = self.get_integration('scaled_raw', integration)
+        title = ("Raw light spectrogram, integration {} out of {}"
+                 .format(integration, self.img_header['NAXIS3']))
+        return self.plot_some_spectrogram(spec, title, ax,
+                                          cmap, cbar, log, **kwargs)
+
+    def plot_dark_spectogram(self, integration=None, ax=None,
+                             cmap=None, cbar=True, log=False,
+                             **kwargs):
+        dark = self.get_integration('scaled_dark', integration)
+        title = ("Dark spectogram, integration {} out of {}"
+                 .format(integration, self.img_header['NAXIS3']))
+        return self.plot_some_spectrogram(dark, title, ax,
+                                          cmap, cbar, log, **kwargs)
+
+    def plot_raw_overview(self, integration=None, log=False,
+                          save_token=None):
+        "Plot overview of spectrogram and profile at index `integration`."
+        fig, axes = plt.subplots(nrows=2, sharex=True)
+        fig.subplots_adjust(top=0.9, bottom=0.1)
+        fig.suptitle(self.plottitle, fontsize=16)
+        ax = self.plot_raw_spectrogram(integration, ax=axes[0],
+                                       cbar=False, log=log)
+        axes[0].set_xlabel('')
+        self.plot_some_profile('scaled_raw', integration,
+                               ax=axes[1], log=log)
+        im = ax.get_images()[0]
+        cb = plt.colorbar(im, ax=axes.tolist())
+        if log:
+            label = 'log(DN/s)'
+        else:
+            label = 'DN/s'
+        cb.set_label(label, fontsize=14, rotation=0)
+        if save_token is not None:
+            fname = "{}_{}.png".format(self.plotfname,
+                                       save_token)
+            fig.savefig(os.path.join(str(plotfolder), fname), dpi=150)
+
+    def plot_raw_profile(self, integration, ax=None):
+        return self.plot_some_profile('scaled_raw', integration,
+                                      ax=ax)
+
+    def plot_dark_profile(self, integration, ax=None):
+        return self.plot_some_profile('scaled_dark', integration,
+                                      ax=ax)
+
+    def get_light_and_dark(self, integration):
+        light = self.get_integration('scaled_raw', integration)
+        dark = self.get_integration('scaled_dark', integration)
+        return light, dark
 
 
 class KindHeader(fits.Header):
@@ -376,3 +547,21 @@ class DarkWriter:
 
     def write(self):
         self.hdulist.writeto(self.outfname, clobber=self.clobber)
+
+
+def some_l1a():
+    try:
+        fname = l1a_filenames()[0]
+    except IndexError:
+        print("No L1A files found.")
+        return
+    return L1AReader(fname)
+
+
+def some_l1b():
+    try:
+        fname = l1b_filenames()[0]
+    except IndexError:
+        print("No L1B files found.")
+        return
+    return L1BReader(fname)

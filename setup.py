@@ -21,10 +21,10 @@ class PyTest(TestCommand):
 
 setup(
     name = "IUVS",
-    version = "0.1beta",
+    version = "0.2",
     packages = find_packages(),
 
-    # install_requires = ['pandas>='+pandas_version, 'astropy'],
+    install_requires = ['astropy'],
     # tests_require = ['pytest'],
 
     cmdclass = {'test': PyTest},
