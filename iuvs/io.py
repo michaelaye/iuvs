@@ -292,16 +292,19 @@ class FitsFile:
         return ax
 
     def plot_some_profile(self, data_attr, integration,
-                          spatial=None, ax=None,
+                          spatial=None, ax=None, scale=False,
                           log=False, **kwargs):
         spec = self.get_integration(data_attr, integration)
+        if scale:
+            spec = spec / self.scaling_factor
+        if spatial is None:
+            # if no spatial bin given, take the middle one
+            spatial = self.img.shape[1]//2
+
         title = ("Profile of {} at spatial: {}, integration {} of {}"
                  .format(data_attr, spatial, integration,
                          self.img_header['NAXIS3']))
 
-        if spatial is None:
-            # if no spatial bin given, take the middle one
-            spatial = self.img.shape[1]//2
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -422,11 +425,13 @@ class L1BReader(FitsFile):
     def plot_raw_overview(self, integration=None, log=False,
                           save_token=None):
         "Plot overview of spectrogram and profile at index `integration`."
-        fig, axes = plt.subplots(nrows=2)
+        fig, axes = plt.subplots(nrows=2, sharex=True)
+        fig.subplots_adjust(top=0.9, bottom=0.1)
         fig.suptitle(self.plottitle, fontsize=16)
         ax = self.plot_raw_spectrogram(integration, ax=axes[0],
                                        cbar=False, log=log)
-        self.plot_some_profile('detector_raw', integration,
+        axes[0].set_xlabel('')
+        self.plot_some_profile('scaled_raw', integration,
                                ax=axes[1], log=log)
         im = ax.get_images()[0]
         cb = plt.colorbar(im, ax=axes.tolist())
@@ -435,22 +440,22 @@ class L1BReader(FitsFile):
         else:
             label = 'DN/s'
         cb.set_label(label, fontsize=14, rotation=0)
-                if save_token is not None:
+        if save_token is not None:
             fname = "{}_{}.png".format(self.plotfname,
                                        save_token)
             fig.savefig(os.path.join(str(plotfolder), fname), dpi=150)
 
-    def plot_raw_profile(self, integration):
-        return self.plot_some_profile('detector_raw', integration,
+    def plot_raw_profile(self, integration, ax=None):
+        return self.plot_some_profile('scaled_raw', integration,
                                       ax=ax)
 
-    def plot_dark_profile(self, integration):
-        return self.plot_some_profile('detector_dark', integration,
+    def plot_dark_profile(self, integration, ax=None):
+        return self.plot_some_profile('scaled_dark', integration,
                                       ax=ax)
 
     def get_light_and_dark(self, integration):
-        light = self.get_integration('detector_raw', integration)
-        dark = self.get_integration('detector_dark', integration)
+        light = self.get_integration('scaled_raw', integration)
+        dark = self.get_integration('scaled_dark', integration)
         return light, dark
 
 
