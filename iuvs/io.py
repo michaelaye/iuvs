@@ -261,7 +261,7 @@ class FitsFile:
 
     def plot_some_spectrogram(self, spec, title, ax=None, cmap=None,
                               cbar=True, log=False, showaxis=True,
-                              min_=None, max_=None,
+                              min_=None, max_=None, set_extent=None,
                               **kwargs):
         if log:
             spec = np.log10(spec)
@@ -271,12 +271,21 @@ class FitsFile:
         if ax is None:
             fig, ax = plt.subplots()
             fig.suptitle(self.plottitle, fontsize=16)
-        waves = self.wavelengths[0]
-        im = ax.imshow(spec, cmap=cmap, extent=(waves[0], waves[-1],
-                                                len(spec), 0),
-                       **kwargs)
+        try:
+            waves = self.wavelengths[0]
+        except IndexError:
+            waves = self.wavelengths
+        if set_extent:
+            im = ax.imshow(spec, cmap=cmap, extent=(waves[0], waves[-1],
+                                                    len(spec), 0),
+                           **kwargs)
+        else:
+            im = ax.imshow(spec, cmap=cmap, **kwargs)
         ax.set_title(title)
-        ax.set_xlabel("Wavelength [nm]")
+        if set_extent:
+            ax.set_xlabel("Wavelength [nm]")
+        else:
+            ax.set_xlabel("Spectral bins")
         ax.set_ylabel('Spatial pixels')
         if not showaxis:
             ax.grid('off')
@@ -303,7 +312,7 @@ class FitsFile:
 
         title = ("Profile of {} at spatial: {}, integration {} of {}"
                  .format(data_attr, spatial, integration,
-                         self.img_header['NAXIS3']))
+                         'length of array to fill in'))
 
 
         if ax is None:
@@ -331,7 +340,7 @@ class FitsFile:
                              cmap=None, cbar=True, log=True):
         spec = self.get_integration('img', integration)
         title = ("Primary spectrogram, integration {} out of {}"
-                 .format(integration, self.img_header['NAXIS3']))
+                 .format(integration, 'length of array to fill in'))
         return self.plot_some_spectrogram(spec, title,
                                           ax, cmap, cbar, log)
 
@@ -409,7 +418,7 @@ class L1BReader(FitsFile):
                              **kwargs):
         spec = self.get_integration('scaled_raw', integration)
         title = ("Raw light spectrogram, integration {} out of {}"
-                 .format(integration, self.img_header['NAXIS3']))
+                 .format(integration, 'length of array'))
         return self.plot_some_spectrogram(spec, title, ax,
                                           cmap, cbar, log, **kwargs)
 
@@ -418,19 +427,19 @@ class L1BReader(FitsFile):
                              **kwargs):
         dark = self.get_integration('scaled_dark', integration)
         title = ("Dark spectogram, integration {} out of {}"
-                 .format(integration, self.img_header['NAXIS3']))
+                 .format(integration, 'length of array'))
         return self.plot_some_spectrogram(dark, title, ax,
                                           cmap, cbar, log, **kwargs)
 
     def plot_raw_overview(self, integration=None, log=False,
                           save_token=None):
         "Plot overview of spectrogram and profile at index `integration`."
-        fig, axes = plt.subplots(nrows=2, sharex=True)
+        fig, axes = plt.subplots(nrows=2, sharex=False)
         fig.subplots_adjust(top=0.9, bottom=0.1)
         fig.suptitle(self.plottitle, fontsize=16)
         ax = self.plot_raw_spectrogram(integration, ax=axes[0],
-                                       cbar=False, log=log)
-        axes[0].set_xlabel('')
+                                       cbar=False, log=log,
+                                       set_extent=False)
         self.plot_some_profile('scaled_raw', integration,
                                ax=axes[1], log=log)
         im = ax.get_images()[0]
