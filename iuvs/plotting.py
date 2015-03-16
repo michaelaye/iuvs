@@ -58,7 +58,7 @@ def make_plotly_multiplot(img, spatial=None, spectral=None, title='No title'):
 
     data = Data([trace1, trace2, trace3, trace4])
 
-    fig = tls.make_subplots(rows=2, cols=2, show)
+    fig = tls.make_subplots(rows=2, cols=2)
     fig['data'] += data
     fig['layout'].update(title=title)
     return fig
