@@ -188,12 +188,8 @@ class FitsFile:
         """fname needs to be absolute complete path. """
         if type(fname) == list:
             fname = fname[0]
-        if fname.endswith('.gz'):
-            infile = gzip.open(fname, 'rb')
-        else:
-            infile = fname
         self.fname = fname
-        self.hdulist = fits.open(infile)
+        self.hdulist = fits.open(fname)
 
     @property
     def scaling_factor(self):
