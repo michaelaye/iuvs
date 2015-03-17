@@ -272,8 +272,10 @@ class FitsFile:
         except IndexError:
             waves = self.wavelengths
         if set_extent:
-            im = ax.imshow(spec, cmap=cmap, extent=(waves[0], waves[-1],
-                                                    len(spec), 0),
+            im = ax.imshow(spec,
+                           cmap=cmap,
+                           extent=(waves[0], waves[-1],
+                                   len(spec), 0),
                            **kwargs)
         else:
             im = ax.imshow(spec, cmap=cmap, **kwargs)
@@ -309,7 +311,6 @@ class FitsFile:
         title = ("Profile of {} at spatial: {}, integration {} of {}"
                  .format(data_attr, spatial, integration,
                          'length of array to fill in'))
-
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -411,12 +412,15 @@ class L1BReader(FitsFile):
 
     def plot_raw_spectrogram(self, integration=None, ax=None,
                              cmap=None, cbar=True, log=False,
+                             set_extent=True,
                              **kwargs):
         spec = self.get_integration('scaled_raw', integration)
         title = ("Raw light spectrogram, integration {} out of {}"
                  .format(integration, 'length of array'))
         return self.plot_some_spectrogram(spec, title, ax,
-                                          cmap, cbar, log, **kwargs)
+                                          cmap, cbar, log,
+                                          set_extent=set_extent,
+                                          **kwargs)
 
     def plot_dark_spectogram(self, integration=None, ax=None,
                              cmap=None, cbar=True, log=False,
