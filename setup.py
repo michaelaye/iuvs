@@ -4,7 +4,7 @@ import sys
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 
-pandas_version = '0.15.1'
+pandas_version = '0.15.2'
 
 class PyTest(TestCommand):
     def finalize_options(self):
@@ -21,7 +21,7 @@ class PyTest(TestCommand):
 
 setup(
     name = "IUVS",
-    version = "0.2",
+    version = "0.3",
     packages = find_packages(),
 
     install_requires = ['astropy'],
