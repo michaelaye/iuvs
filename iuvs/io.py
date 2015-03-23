@@ -1,6 +1,5 @@
 import datetime as dt
 from astropy.io import fits
-import gzip
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
@@ -192,11 +191,23 @@ class FitsFile:
         self.hdulist = fits.open(fname)
 
     @property
+    def ndims(self):
+        return self.img_header['NAXIS']
+
+    @property
+    def n_integrations(self):
+        if self.ndims == 2:
+            return 1
+        else:
+            return self.img_header['NAXIS3']
+
+    @property
     def scaling_factor(self):
         """Return factor to get DN/s.
 
         Because the binning returns just summed up values, one must
-        also include the binning as a scaling factor.
+        also include the binning as a scaling factor, not only the
+        integration time.
         """
         bin_scale = self.img_header['SPA_SIZE'] * self.img_header['SPE_SIZE']
         return bin_scale * self.int_time
@@ -310,7 +321,7 @@ class FitsFile:
 
         title = ("Profile of {} at spatial: {}, integration {} of {}"
                  .format(data_attr, spatial, integration,
-                         'length of array to fill in'))
+                         self.n_integrations))
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -337,7 +348,7 @@ class FitsFile:
                              cmap=None, cbar=True, log=True):
         spec = self.get_integration('img', integration)
         title = ("Primary spectrogram, integration {} out of {}"
-                 .format(integration, 'length of array to fill in'))
+                 .format(integration, self.n_integrations))
         return self.plot_some_spectrogram(spec, title,
                                           ax, cmap, cbar, log)
 
@@ -416,7 +427,7 @@ class L1BReader(FitsFile):
                              **kwargs):
         spec = self.get_integration('scaled_raw', integration)
         title = ("Raw light spectrogram, integration {} out of {}"
-                 .format(integration, 'length of array'))
+                 .format(integration, self.n_integrations))
         return self.plot_some_spectrogram(spec, title, ax,
                                           cmap, cbar, log,
                                           set_extent=set_extent,
@@ -427,7 +438,7 @@ class L1BReader(FitsFile):
                              **kwargs):
         dark = self.get_integration('scaled_dark', integration)
         title = ("Dark spectogram, integration {} out of {}"
-                 .format(integration, 'length of array'))
+                 .format(integration, self.n_integrations))
         return self.plot_some_spectrogram(dark, title, ax,
                                           cmap, cbar, log, **kwargs)
 
