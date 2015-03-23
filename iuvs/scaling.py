@@ -39,10 +39,11 @@ def get_lr(data, size=10):
     return get_corner(data, 'lr', size)
 
 
-
-
 class DarkScaler:
+    """Managing the general attributes for scaling darks around.
 
+    This is the base class that is inherited by the other scalers.
+    """
     def __init__(self, data_in, data_out):
         self.data_in = data_in
         self.data_out = data_out
@@ -70,21 +71,19 @@ class DarkScaler:
 
 
 class AddScaler(DarkScaler):
-
+    """Additive Scaling model."""
     def model(self, x, a):
         return a + x
 
 
 class MultScaler(DarkScaler):
-
+    """Pure Multiplicative scaling model"""
     def model(self, x, a):
         return a * x
 
 
 class PolyScaler(DarkScaler):
-
     """Manage polynomial fits. Default rank is 2."""
-
     def __init__(self, data_in, data_out, rank=2):
         super().__init__(data_in, data_out)
         self.rank = rank
