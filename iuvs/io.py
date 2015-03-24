@@ -5,9 +5,9 @@ import pandas as pd
 import os
 from pathlib import Path
 import socket
-from iuvs import scaling
 import numpy as np
-
+from scipy.ndimage.filters import generic_filter
+from matplotlib.patches import Rectangle
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -25,7 +25,7 @@ stagelevel1bpath = stage / 'level1b'
 productionlevel1apath = production / 'level1a'
 productionlevel1bpath = production / 'level1b'
 
-mycmap = 'YlGnBu_r'
+mycmap = 'cubehelix'
 plotfolder = HOME / 'Dropbox/src/iuvs/notebooks/plots'
 
 
@@ -266,12 +266,13 @@ class FitsFile:
             spec = data
         return spec
 
-    def plot_some_spectrogram(self, spec, title, ax=None, cmap=None,
+    def plot_some_spectrogram(self, inspec, title, ax=None, cmap=None,
                               cbar=True, log=False, showaxis=True,
                               min_=None, max_=None, set_extent=None,
+                              draw_rectangle=True,
                               **kwargs):
         if log:
-            spec = np.log10(spec)
+            spec = np.log10(inspec)
         if cmap is None:
             cmap = mycmap
 
@@ -307,6 +308,8 @@ class FitsFile:
             cb.set_label(label, fontsize=14, rotation=0)
         self.current_ax = ax
         self.current_spec = spec
+        if draw_rectangle:
+            ax.add_patch(get_rectangle(inspec))
         return ax
 
     def plot_some_profile(self, data_attr, integration,
@@ -325,7 +328,7 @@ class FitsFile:
 
         if ax is None:
             fig, ax = plt.subplots()
-            fig.suptitle(self.plottitle, fontsize=16)
+            fig.suptitle(self.plottitle, fontsize=12)
         if log:
             func = ax.semilogy
         else:
@@ -335,7 +338,7 @@ class FitsFile:
 
         ax.set_xlim((self.wavelengths[spatial][0],
                      self.wavelengths[spatial][-1]))
-        ax.set_title(title)
+        ax.set_title(title, fontsize=11)
         ax.set_xlabel("Wavelength [nm]")
         if log:
             ax.set_ylabel("log(DN/s)")
@@ -443,16 +446,17 @@ class L1BReader(FitsFile):
                                           cmap, cbar, log, **kwargs)
 
     def plot_raw_overview(self, integration=None, log=False,
-                          save_token=None):
+                          save_token=None, spatial=None,
+                          **kwargs):
         "Plot overview of spectrogram and profile at index `integration`."
         fig, axes = plt.subplots(nrows=2, sharex=False)
         fig.subplots_adjust(top=0.9, bottom=0.1)
         fig.suptitle(self.plottitle, fontsize=16)
         ax = self.plot_raw_spectrogram(integration, ax=axes[0],
                                        cbar=False, log=log,
-                                       set_extent=False)
+                                       set_extent=False, **kwargs)
         self.plot_some_profile('scaled_raw', integration,
-                               ax=axes[1], log=log)
+                               ax=axes[1], log=log, spatial=spatial)
         im = ax.get_images()[0]
         cb = plt.colorbar(im, ax=axes.tolist())
         if log:
@@ -464,6 +468,8 @@ class L1BReader(FitsFile):
             fname = "{}_{}.png".format(self.plotfname,
                                        save_token)
             fig.savefig(os.path.join(str(plotfolder), fname), dpi=150)
+
+        return fig
 
     def plot_raw_profile(self, integration, ax=None):
         return self.plot_some_profile('scaled_raw', integration,
@@ -511,62 +517,81 @@ class FittedHeader(KindHeader):
                          "equivalent to the degree of the polynomial fit.")
 
 
-class DarkWriter:
+def get_rectangle(spectogram):
+    spa_slice, spe_slice = find_scaling_window(spectogram)
+    xy = spe_slice.start-0.5, spa_slice.start-0.5
+    width = spe_slice.stop - spe_slice.start
+    height = spa_slice.stop - spa_slice.start
+    return Rectangle(xy, width, height, fill=False)
 
-    """Manages the creation of FITS file for dark analysis results.
-    """
 
-    def __init__(self, outfname, dark1, dark2, clobber=False):
-        """Initialize DarkWriter.
+def find_scaling_window(to_filter, size=None):
+    if size is None:
+        x = max(to_filter.shape[0]//5, 2)
+        y = max(to_filter.shape[1]//10, 1)
+        size = (x, y)
+    filtered = generic_filter(to_filter, np.median, size=size,
+                              mode='constant', cval=to_filter.max()*100)
+    min_spa, min_spe = np.unravel_index(filtered.argmin(), to_filter.shape)
+    spa1 = min_spa - size[0]//2
+    if spa1 < 0:
+        spa1 = 0
+    spa2 = spa1 + size[0]
+    if spa2 > to_filter.shape[0]:
+        spa1 = to_filter.shape[0] - size[0]
+        spa2 = to_filter.shape[0]
+    spe1 = min_spe - size[1]//2
+    if spe1 < 0:
+        spe1 = 0
+    spe2 = spe1 + size[1]
+    if spe2 > to_filter.shape[1]:
+        spe1 = to_filter.shape[1] - size[1]
+        spe2 = to_filter.shape[1]
+    spa_slice = slice(spa1, spa2)
+    spe_slice = slice(spe1, spe2)
+    return (spa_slice, spe_slice)
 
-        Parameters
-        ==========
-            outfname: Filename of fits file to write
-            dark1, dark2: numpy.array of dark images
-            clobber: Boolean to control if to overwrite existing fits file
-                Default: False
-        """
-        self.outfname = outfname
-        self.clobber = clobber
-        header = PrimHeader()
-        hdu = fits.PrimaryHDU(dark1, header=header)
-        hdulist = fits.HDUList([hdu])
-        header = KindHeader()
-        hdu = fits.ImageHDU(dark2, header=header, name='dark2')
-        hdulist.append(hdu)
-        self.hdulist = hdulist
 
-    def append_polyfitted(self, scaler):
-        """Append a polynomial fitted dark to the fits file.
+def check_scaling_window_finder(l1b, integration):
+    to_filter = l1b.get_integration('scaled_raw', integration)
+    x = max(to_filter.shape[0]//10, 1)
+    y = max(to_filter.shape[1]//10, 1)
+    size = (x, y)
+    print("Img shape:", to_filter.shape)
+    print("Kernel size:", size)
 
-        Parameters
-        ==========
+    filtered = generic_filter(to_filter, np.std, size=size,
+                              mode='constant', cval=to_filter.max()*100)
+    min_spa, min_spe = np.unravel_index(filtered.argmin(), to_filter.shape)
+    print("Minimum:", filtered.min())
+    print("Minimum coords", min_spa, min_spe)
 
-            polyscaler: type of scaling.Polyscaler
+    spa1 = min_spa - size[0]//2
+    if spa1 < 0:
+        spa1 = 0
+    spa2 = spa1 + size[0]
+    if spa2 > to_filter.shape[0]:
+        spa1 = to_filter.shape[0] - size[0]
+        spa2 = to_filter.shape[0]
+    print("Spatial:", spa1, spa2)
 
-        """
-        if type(scaler) == scaling.PolyScaler:
-            rank = scaler.rank
-        elif type(scaler) == scaling.MultScaler:
-            rank = 0
-        elif type(scaler) == scaling.AddScaler:
-            rank = -1
-        else:
-            rank = -99
-        # create fits header with rank and kind card
-        header = FittedHeader(rank)
-        # add coefficienst card
-        header['coeffs'] = str(list(scaler.p))
-        header.add_comment('The coefficients are listed highest rank first.')
-        # add stddev card
-        header.set('stddev', scaler.residual.std(),
-                   'Standard deviation of residual')
-        hdu = fits.ImageHDU(scaler.residual, header=header,
-                            name='rank{}'.format(rank))
-        self.hdulist.append(hdu)
+    spe1 = min_spe - size[1]//2
+    if spe1 < 0:
+        spe1 = 0
+    spe2 = spe1 + size[1]
+    if spe2 > to_filter.shape[1]:
+        spe1 = to_filter.shape[1] - size[1]
+        spe2 = to_filter.shape[1]
+    print("Spectral:", spe1, spe2)
+    spa_slice = slice(spa1, spa2)
+    spe_slice = slice(spe1, spe2)
 
-    def write(self):
-        self.hdulist.writeto(self.outfname, clobber=self.clobber)
+    fig, axes = plt.subplots(nrows=3)
+    axes[0].imshow(np.log(to_filter), cmap=mycmap)
+    axes[0].add_patch(get_rectangle(to_filter))
+    axes[1].imshow(np.log(filtered), cmap=mycmap, vmax=0.1)
+    axes[1].add_patch(get_rectangle(to_filter))
+    axes[2].hist(filtered[~np.isnan(filtered)].ravel(), bins=100)
 
 
 def some_l1a():

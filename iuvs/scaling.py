@@ -1,7 +1,7 @@
 from scipy.optimize import curve_fit
 import numpy as np
 import matplotlib.pyplot as plt
-import io
+from . import io
 
 
 def multimodel(x, a):
@@ -69,15 +69,25 @@ class DarkScaler:
     def apply_fit(self, in_):
         return self.model(in_, self.p)
 
+    @property
+    def p_formatted(self):
+        return list(reversed(["{:.2f}".format(i) for i in self.p]))
+
 
 class AddScaler(DarkScaler):
     """Additive Scaling model."""
+    name = 'AddScaler'
+    rank = -1
+
     def model(self, x, a):
         return a + x
 
 
 class MultScaler(DarkScaler):
     """Pure Multiplicative scaling model"""
+    name = 'MultScaler'
+    rank = 0
+
     def model(self, x, a):
         return a * x
 
@@ -87,6 +97,7 @@ class PolyScaler(DarkScaler):
     def __init__(self, data_in, data_out, rank=2):
         super().__init__(data_in, data_out)
         self.rank = rank
+        self.name = 'Poly'+str(self.rank)
 
     @property
     def rank(self):
@@ -117,6 +128,21 @@ class PolyScaler(DarkScaler):
     def perr(self):
         print("Not defined yet for PolyFitter.")
         return
+
+
+class PolyScaler1(PolyScaler):
+    def __init__(self, *args):
+        super().__init__(*args, rank=1)
+
+
+class PolyScaler2(PolyScaler):
+    def __init__(self, *args):
+        super().__init__(*args, rank=2)
+
+
+class PolyScaler3(PolyScaler):
+    def __init__(self, *args):
+        super().__init__(*args, rank=3)
 
 
 class PolyScalerManager:
@@ -163,3 +189,130 @@ class DarkFitter:
         scaler.do_fit()
         self.scaler = scaler
 
+
+def poly_fitting(l1b, integration, spatialslice, spectralslice):
+    fullraw, fulldark = l1b.get_light_and_dark(integration)
+    light = fullraw[spatialslice, spectralslice]
+    dark = fulldark[spatialslice, spectralslice]
+    scaler = PolyScaler(dark, light)
+    scaler.do_fit()
+    return scaler.apply_fit(fulldark)
+
+
+def get_min_max(l1b, integration, spa_slice, spe_slice):
+    fitted_dark = poly_fitting(l1b, integration, spa_slice, spe_slice)
+    light, dark = l1b.get_light_and_dark(integration)
+    sub = light - fitted_dark
+    min_, max_ = np.percentile(sub, (2, 92))
+    return min_, max_
+
+
+def do_all(l1b, integration, spa_slice, spe_slice):
+
+    fullraw, fulldark = l1b.get_light_and_dark(integration)
+    light_subframe = fullraw[spa_slice, spe_slice]
+    dark_subframe = fulldark[spa_slice, spe_slice]
+
+    scalers = [AddScaler, MultScaler, PolyScaler1,
+               PolyScaler2, PolyScaler3]
+
+    fig, axes = plt.subplots(nrows=len(scalers)+3, sharex=True)
+
+    l1b.plot_raw_profile(integration, ax=axes[0])
+    axes[0].set_ylim(*np.percentile(fullraw, (2, 96)))
+
+    l1b.plot_dark_profile(integration, ax=axes[1])
+
+    min_, max_ = get_min_max(l1b, integration, spa_slice, spe_slice)
+
+    l1b.plot_some_profile('detector_background_subtracted', integration,
+                          ax=axes[2], scale=True)
+    axes[2].set_ylim(min_, max_)
+
+    spatial = fullraw.shape[0]//2
+
+    for Scaler, ax in zip(scalers, axes[3:]):
+        scaler = Scaler(dark_subframe, light_subframe)
+        scaler.do_fit()
+        fitted_dark = scaler.apply_fit(fulldark)
+        sub = fullraw - fitted_dark
+        ax.plot(l1b.wavelengths[integration], sub[spatial])
+        ax.set_ylim(min_, max_)
+        ax.set_xlim((l1b.wavelengths[integration][0],
+                     l1b.wavelengths[integration][-1]))
+
+        title = ("{}, {}".format(scaler.name,
+                                 scaler.p_formatted))
+        ax.text(.5, .9, title, horizontalalignment='center',
+                transform=ax.transAxes, fontsize=12)
+
+    for ax in axes[:-1]:
+        ax.set_xlabel('')
+    axes[-1].set_xlabel("Wavelength [nm]")
+    fig.suptitle("{}\nSlice: [{}:{}, {}:{}]\n"
+                 .format(l1b.plottitle,
+                         spa_slice.start,
+                         spa_slice.stop,
+                         spe_slice.start,
+                         spe_slice.stop),
+                 fontsize=11)
+    fig.subplots_adjust(top=0.90, bottom=0.07)
+    fig.savefig('plots/'+l1b.plotfname+'_2.png', dpi=150)
+
+
+class DarkWriter:
+
+    """Manages the creation of FITS file for dark analysis results.
+    """
+
+    def __init__(self, outfname, dark1, dark2, clobber=False):
+        """Initialize DarkWriter.
+
+        Parameters
+        ==========
+            outfname: Filename of fits file to write
+            dark1, dark2: numpy.array of dark images
+            clobber: Boolean to control if to overwrite existing fits file
+                Default: False
+        """
+        self.outfname = outfname
+        self.clobber = clobber
+        header = PrimHeader()
+        hdu = fits.PrimaryHDU(dark1, header=header)
+        hdulist = fits.HDUList([hdu])
+        header = KindHeader()
+        hdu = fits.ImageHDU(dark2, header=header, name='dark2')
+        hdulist.append(hdu)
+        self.hdulist = hdulist
+
+    def append_polyfitted(self, scaler):
+        """Append a polynomial fitted dark to the fits file.
+
+        Parameters
+        ==========
+
+            polyscaler: type of Polyscaler
+
+        """
+        if type(scaler) == PolyScaler:
+            rank = scaler.rank
+        elif type(scaler) == MultScaler:
+            rank = 0
+        elif type(scaler) == AddScaler:
+            rank = -1
+        else:
+            rank = -99
+        # create fits header with rank and kind card
+        header = FittedHeader(rank)
+        # add coefficienst card
+        header['coeffs'] = str(list(scaler.p))
+        header.add_comment('The coefficients are listed highest rank first.')
+        # add stddev card
+        header.set('stddev', scaler.residual.std(),
+                   'Standard deviation of residual')
+        hdu = fits.ImageHDU(scaler.residual, header=header,
+                            name='rank{}'.format(rank))
+        self.hdulist.append(hdu)
+
+    def write(self):
+        self.hdulist.writeto(self.outfname, clobber=self.clobber)

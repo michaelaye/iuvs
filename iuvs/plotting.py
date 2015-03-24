@@ -9,7 +9,9 @@ try:
     import plotly.tools as tls
 except ImportError:
     print("Can't import plotly")
-from iuvs import scaling
+from moviepy.video.io.bindings import mplfig_to_npimage
+import moviepy.editor as mpy
+from .scaling import poly_fitting
 
 
 def get_pie_plot(df, col, ax=None):
@@ -83,7 +85,6 @@ def make_plotly_multiplot(img, spatial=None, spectral=None, title='No title',
                             color='blue',
                             opacity=0.5)
                        )
-    p50 = np.percentile(img, 50)
     annotation = Annotation(x=0.95, y=0.4, xref='paper', yref='paper',
                             text="Mean: {:.1f}<br>STD: {:.1f}".
                                  format(tohist.mean(), tohist.std()),
@@ -128,9 +129,6 @@ class L1BImageOperator(object):
         return dataitems
 
 
-from moviepy.video.io.bindings import mplfig_to_npimage
-import moviepy.editor as mpy
-
 def make_spectogram_anim(l1b, data_attr, fps):
     """Create animation out of `data_attr` spectrograms.
 
@@ -149,23 +147,26 @@ def make_spectogram_anim(l1b, data_attr, fps):
     `data_attr`.mp4/.gif
     """
     data = getattr(l1b, data_attr)
-    fig_mpl, ax = plt.subplots(1, figsize=(10,6), facecolor='white')
+    fig_mpl, ax = plt.subplots(1, figsize=(10, 6), facecolor='white')
     xx = l1b.wavelengths[0]
-    zz = lambda x: np.log(data[x])
+
+    def zz(x):
+        return np.log(data[x])
+
     ax.set_title(data_attr)
     ax.set_xlim(xx[0], xx[-1])
     ax.axis('off')
     im = ax.imshow(zz(0), cmap='binary')
-    
+
     duration = len(data) / fps
-    
+
     def make_frame_mpl(t):
         index = int(t*fps)
-        im.set_data( zz(index))  # <= Update the curve
+        im.set_data(zz(index))  # <= Update the curve
         ax.set_title('Spectogram {} out of {}'.format(index+1, len(data)))
-        return mplfig_to_npimage(fig_mpl) # RGB image of the figure
+        return mplfig_to_npimage(fig_mpl)  # RGB image of the figure
 
-    animation =mpy.VideoClip(make_frame_mpl, duration=duration)
+    animation = mpy.VideoClip(make_frame_mpl, duration=duration)
     animation.write_videofile(data_attr+".mp4", fps=fps)
     animation.write_gif(data_attr+'.gif', fps=fps)
 
@@ -184,7 +185,7 @@ def make_line_profile_anim(l1b, data_attr, fps, spatial=None):
     spatial: <int>
         Pixel index location for profile. Default is central pixel of
         spatial axis.
-    
+
     Returns
     =======
     Produces an .mp4 and .mp4 in current directory, with name
@@ -193,22 +194,71 @@ def make_line_profile_anim(l1b, data_attr, fps, spatial=None):
     data = getattr(l1b, data_attr)
     if spatial is None:
         spatial = data.shape[1]//2
-    fig_mpl, ax = plt.subplots(1, figsize=(10,6), facecolor='white')
+    fig_mpl, ax = plt.subplots(1, figsize=(10, 6), facecolor='white')
     xx = l1b.wavelengths[0]
-    zz = lambda x: data[x][spatial]
+
+    def zz(x):
+        return data[x][spatial]
+
     ax.set_title(data_attr)
     ax.set_xlim(xx[0], xx[-1])
     line, = ax.semilogy(xx, zz(0), lw=3)
-    
+
     duration = len(data) / fps
-    
+
     def make_frame_mpl(t):
         index = int(t*fps)
         line.set_ydata(zz(index))
         ax.set_title('t: {}, Profile {} at spatial {} out of {}'
                      .format(t, index+1, spatial, len(data)))
         return mplfig_to_npimage(fig_mpl)
-    
+
     animation = mpy.VideoClip(make_frame_mpl, duration=duration)
     animation.write_videofile(data_attr+'_profiles.mp4', fps=fps)
     animation.write_gif(data_attr+'_profiles.gif', fps=fps)
+
+
+def plot_profiles(l1b, spatialslice, spectralslice, integration):
+    # sharing x axes
+    fig, axes = plt.subplots(nrows=4, sharex=True)
+    axes = axes.ravel()
+    light, dark = l1b.get_light_and_dark(integration)
+
+    spatial = light.shape[0]//2
+    # Raw profile
+    l1b.plot_raw_profile(integration, ax=axes[0])
+    # Dark profile
+    l1b.plot_dark_profile(integration, ax=axes[1])
+
+    # fitting
+    fitted_dark = poly_fitting(l1b, integration, spatialslice, spectralslice)
+    sub = light - fitted_dark
+    min_, max_ = np.percentile(sub, (2, 92))
+
+    # old subtraction from L1B file
+    l1b.plot_some_profile('detector_background_subtracted', integration,
+                          spatial=spatial, ax=axes[2], scale=True)
+    axes[2].set_ylim(min_, max_)
+    axes[2].set_title('subtracted from L1B file, y-axis same as last profile')
+
+    # remove first axis xlabels to make plot less messy
+    for ax in axes[0:3]:
+        ax.set_xlabel('')
+
+    # New subtraction
+    axes[3].plot(l1b.wavelengths[integration], sub[spatial])
+    axes[3].set_ylim(min_, max_)
+    axes[3].set_title('subtracted with fitted dark')
+    axes[3].set_xlabel('Wavelength [nm]')
+
+    fig.suptitle("{}\nSlice: [{}:{}, {}:{}]\n"
+                 .format(l1b.plottitle,
+                         spatialslice.start,
+                         spatialslice.stop,
+                         spectralslice.start,
+                         spectralslice.stop),
+                 fontsize=14)
+    fig.subplots_adjust(top=0.85)
+#     fig.tight_layout()
+    fig.savefig('plots/'+l1b.plotfname+'_2.png', dpi=150)
+    return sub
