@@ -248,6 +248,8 @@ def do_all(l1b, integration, spa_slice, spe_slice):
 
     for ax in axes[:-1]:
         ax.set_xlabel('')
+    for ax in axes:
+        ax.locator_params(axis='y', nbins=6)
     axes[-1].set_xlabel("Wavelength [nm]")
     fig.suptitle("{}\nSlice: [{}:{}, {}:{}]\n"
                  .format(l1b.plottitle,
