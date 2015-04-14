@@ -1,3 +1,6 @@
-def test_fits_write():
-    arr = np.arange(10000).shape(100,100)
+import numpy as np
+
+
+# def test_fits_write():
+#     arr = np.arange(10000).shape(100,100)
 
