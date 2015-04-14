@@ -273,6 +273,8 @@ class FitsFile:
                               **kwargs):
         if log:
             spec = np.log10(inspec)
+        else:
+            spec = inspec
         if cmap is None:
             cmap = mycmap
 
@@ -485,38 +487,6 @@ class L1BReader(FitsFile):
         return light, dark
 
 
-class KindHeader(fits.Header):
-
-    """FITS header with the 'kind' card."""
-
-    def __init__(self, kind='original dark'):
-        super().__init__()
-        self.set('kind', kind, comment='The kind of image')
-
-
-class PrimHeader(KindHeader):
-
-    """FITS primary header with a name card."""
-
-    def __init__(self):
-        super().__init__()
-        self.set('name', 'dark1')
-
-
-class FittedHeader(KindHeader):
-
-    """FITS header with a kind and a rank card."""
-
-    def __init__(self, rank):
-        super().__init__('fitted dark')
-        comment = "The degree of polynom used for the scaling."
-        self.set('rank', rank, comment=comment)
-        self.add_comment("The rank is '-1' for 'Additive' fitting, '0' is "
-                         "for 'Multiplicative' fitting without additive "
-                         "offset. For all ranks larger than 0 it is "
-                         "equivalent to the degree of the polynomial fit.")
-
-
 def get_rectangle(spectogram):
     spa_slice, spe_slice = find_scaling_window(spectogram)
     xy = spe_slice.start-0.5, spa_slice.start-0.5
@@ -583,8 +553,6 @@ def check_scaling_window_finder(l1b, integration):
         spe1 = to_filter.shape[1] - size[1]
         spe2 = to_filter.shape[1]
     print("Spectral:", spe1, spe2)
-    spa_slice = slice(spa1, spa2)
-    spe_slice = slice(spe1, spe2)
 
     fig, axes = plt.subplots(nrows=3)
     axes[0].imshow(np.log(to_filter), cmap=mycmap)
