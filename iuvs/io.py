@@ -418,7 +418,6 @@ class FitsFile:
                                       **kwargs)
 
 
-
 class L1AReader(FitsFile):
 
     """For Level1a"""
@@ -572,38 +571,6 @@ class L1BReader(FitsFile):
         light = self.get_integration('raw_dn_s', integration)
         dark = self.get_integration('dark_dn_s', integration)
         return light, dark
-
-
-class KindHeader(fits.Header):
-
-    """FITS header with the 'kind' card."""
-
-    def __init__(self, kind='original dark'):
-        super().__init__()
-        self.set('kind', kind, comment='The kind of image')
-
-
-class PrimHeader(KindHeader):
-
-    """FITS primary header with a name card."""
-
-    def __init__(self):
-        super().__init__()
-        self.set('name', 'dark1')
-
-
-class FittedHeader(KindHeader):
-
-    """FITS header with a kind and a rank card."""
-
-    def __init__(self, rank):
-        super().__init__('fitted dark')
-        comment = "The degree of polynom used for the scaling."
-        self.set('rank', rank, comment=comment)
-        self.add_comment("The rank is '-1' for 'Additive' fitting, '0' is "
-                         "for 'Multiplicative' fitting without additive "
-                         "offset. For all ranks larger than 0 it is "
-                         "equivalent to the degree of the polynomial fit.")
 
 
 def get_rectangle(spectogram):

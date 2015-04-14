@@ -2,14 +2,7 @@ from scipy.optimize import curve_fit
 import numpy as np
 import matplotlib.pyplot as plt
 from . import io
-
-
-def multimodel(x, a):
-    return a*x
-
-
-def addmodel(x, a):
-    return a+x
+from astropy.io import fits
 
 
 def get_corner(data, corner, size):
@@ -40,10 +33,12 @@ def get_lr(data, size=10):
 
 
 class DarkScaler:
+
     """Managing the general attributes for scaling darks around.
 
     This is the base class that is inherited by the other scalers.
     """
+
     def __init__(self, data_in, data_out):
         self.data_in = data_in
         self.data_out = data_out
@@ -67,6 +62,13 @@ class DarkScaler:
         return self.residual / self.data_out
 
     def apply_fit(self, in_):
+        """Apply the currently active fit parameters to provided data.
+
+        After the fit parameters have been determined for the data from
+        initialization, one can apply the determined fit parameter with the
+        model of this object to externally provided data, for example the
+        total of an image, if fit was done on subframe.
+        """
         return self.model(in_, self.p)
 
     @property
@@ -75,6 +77,7 @@ class DarkScaler:
 
 
 class AddScaler(DarkScaler):
+
     """Additive Scaling model."""
     name = 'AddScaler'
     rank = -1
@@ -82,8 +85,12 @@ class AddScaler(DarkScaler):
     def model(self, x, a):
         return a + x
 
+    def expected(self):
+        return self.data_out.mean() - self.data_in.mean()
+
 
 class MultScaler(DarkScaler):
+
     """Pure Multiplicative scaling model"""
     name = 'MultScaler'
     rank = 0
@@ -91,9 +98,14 @@ class MultScaler(DarkScaler):
     def model(self, x, a):
         return a * x
 
+    def expected(self):
+        return self.data_out.mean() / self.data_in.mean()
+
 
 class PolyScaler(DarkScaler):
+
     """Manage polynomial fits. Default rank is 2."""
+
     def __init__(self, data_in, data_out, rank=2):
         super().__init__(data_in, data_out)
         self.rank = rank
@@ -131,16 +143,19 @@ class PolyScaler(DarkScaler):
 
 
 class PolyScaler1(PolyScaler):
+
     def __init__(self, *args):
         super().__init__(*args, rank=1)
 
 
 class PolyScaler2(PolyScaler):
+
     def __init__(self, *args):
         super().__init__(*args, rank=2)
 
 
 class PolyScaler3(PolyScaler):
+
     def __init__(self, *args):
         super().__init__(*args, rank=3)
 
@@ -179,6 +194,7 @@ class PolyScalerManager:
 
 
 class DarkFitter:
+
     def __init__(self, fname):
         self.fname = fname
         l1b = io.L1BReader(fname)
@@ -283,6 +299,38 @@ def do_all(l1b, integration, log=False):
                  fontsize=11)
     fig.subplots_adjust(top=0.90, bottom=0.07)
     fig.savefig('/home/klay6683/plots/'+l1b.plotfname+'_2.png', dpi=150)
+
+
+class KindHeader(fits.Header):
+
+    """FITS header with the 'kind' card."""
+
+    def __init__(self, kind='original dark'):
+        super().__init__()
+        self.set('kind', kind, comment='The kind of image')
+
+
+class PrimHeader(KindHeader):
+
+    """FITS primary header with a name card."""
+
+    def __init__(self):
+        super().__init__()
+        self.set('name', 'dark1')
+
+
+class FittedHeader(KindHeader):
+
+    """FITS header with a kind and a rank card."""
+
+    def __init__(self, rank):
+        super().__init__('fitted dark')
+        comment = "The degree of polynom used for the scaling."
+        self.set('rank', rank, comment=comment)
+        self.add_comment("The rank is '-1' for 'Additive' fitting, '0' is "
+                         "for 'Multiplicative' fitting without additive "
+                         "offset. For all ranks larger than 0 it is "
+                         "equivalent to the degree of the polynomial fit.")
 
 
 class DarkWriter:
