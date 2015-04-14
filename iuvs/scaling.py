@@ -71,7 +71,7 @@ class DarkScaler:
 
     @property
     def p_formatted(self):
-        return list(reversed(["{:.2f}".format(i) for i in self.p]))
+        return list(reversed(["{:.3f}".format(i) for i in self.p]))
 
 
 class AddScaler(DarkScaler):
@@ -203,55 +203,78 @@ def get_min_max(l1b, integration, spa_slice, spe_slice):
     fitted_dark = poly_fitting(l1b, integration, spa_slice, spe_slice)
     light, dark = l1b.get_light_and_dark(integration)
     sub = light - fitted_dark
-    min_, max_ = np.percentile(sub, (2, 92))
+    min_, max_ = np.percentile(sub, (2, 98))
     return min_, max_
 
 
-def do_all(l1b, integration, spa_slice, spe_slice):
-
+def do_all(l1b, integration, log=False):
     fullraw, fulldark = l1b.get_light_and_dark(integration)
+    spa_slice, spe_slice = l1b.find_scaling_window(fullraw)
     light_subframe = fullraw[spa_slice, spe_slice]
     dark_subframe = fulldark[spa_slice, spe_slice]
 
     scalers = [AddScaler, MultScaler, PolyScaler1,
-               PolyScaler2, PolyScaler3]
+               PolyScaler2]
 
     fig, axes = plt.subplots(nrows=len(scalers)+3, sharex=True)
 
-    l1b.plot_raw_profile(integration, ax=axes[0])
+    l1b.plot_raw_profile(integration, ax=axes[0], log=log)
     axes[0].set_ylim(*np.percentile(fullraw, (2, 96)))
 
-    l1b.plot_dark_profile(integration, ax=axes[1])
+    l1b.plot_dark_profile(integration, ax=axes[1], log=log)
 
-    min_, max_ = get_min_max(l1b, integration, spa_slice, spe_slice)
+    # min_, max_ = get_min_max(l1b, integration, spa_slice, spe_slice)
+    if int(l1b.int_time) == 1:
+        min_, max_ = (-5, 15)
+    else:
+        min_, max_ = (-1, 3)
 
     l1b.plot_some_profile('detector_background_subtracted', integration,
-                          ax=axes[2], scale=True)
-    axes[2].set_ylim(min_, max_)
+                          ax=axes[2], scale=True, log=log)
+    dbs = l1b.get_integration('dbs_dn_s', integration)
+    subdbs = dbs[spa_slice, spe_slice]
+    title = axes[2].get_title() + ', Mean:{:.1f}, STD:{:.3f}'\
+                                  .format(subdbs.mean(),
+                                          subdbs.std())
 
-    spatial = fullraw.shape[0]//2
+    axes[2].set_title('')
+    axes[2].text(.5, .9, title, horizontalalignment='center',
+                 transform=axes[2].transAxes, fontsize=10)
 
+    spatial = l1b.spatial_size//2
     for Scaler, ax in zip(scalers, axes[3:]):
         scaler = Scaler(dark_subframe, light_subframe)
         scaler.do_fit()
         fitted_dark = scaler.apply_fit(fulldark)
         sub = fullraw - fitted_dark
-        ax.plot(l1b.wavelengths[integration], sub[spatial])
-        ax.set_ylim(min_, max_)
+        mean = sub[spa_slice, spe_slice].mean()
+        std = sub[spa_slice, spe_slice].std()
+        if log:
+            ax.semilogy(l1b.wavelengths[integration], sub[spatial])
+            ax.set_ylabel('log(DN/s)')
+        else:
+            ax.plot(l1b.wavelengths[integration], sub[spatial])
+            ax.set_ylabel('DN/s')
         ax.set_xlim((l1b.wavelengths[integration][0],
                      l1b.wavelengths[integration][-1]))
-
-        title = ("{}, {}".format(scaler.name,
-                                 scaler.p_formatted))
+        parameters = scaler.p_formatted
+        if isinstance(scaler, AddScaler) or isinstance(scaler, MultScaler):
+            parameters = "{} +- {:.3f}".format(scaler.p_formatted[0], scaler.perr[0])
+        title = ("{}, {}. Mean:{:.1f}, STD:{:.3f}".format(scaler.name,
+                                                          parameters,
+                                                          mean, std))
         ax.text(.5, .9, title, horizontalalignment='center',
                 transform=ax.transAxes, fontsize=12)
 
     for ax in axes[:-1]:
         ax.set_xlabel('')
     for ax in axes:
-        ax.locator_params(axis='y', nbins=6)
+        if not log:
+            ax.locator_params(axis='y', nbins=6)
+        ax.set_ylim(min_, max_)
+
     axes[-1].set_xlabel("Wavelength [nm]")
-    fig.suptitle("{}\nSlice: [{}:{}, {}:{}]\n"
+    fig.suptitle("{}\nProfiles at middle spatial, Window: [{}:{}, {}:{}]\n"
                  .format(l1b.plottitle,
                          spa_slice.start,
                          spa_slice.stop,
@@ -259,7 +282,7 @@ def do_all(l1b, integration, spa_slice, spe_slice):
                          spe_slice.stop),
                  fontsize=11)
     fig.subplots_adjust(top=0.90, bottom=0.07)
-    fig.savefig('plots/'+l1b.plotfname+'_2.png', dpi=150)
+    fig.savefig('/home/klay6683/plots/'+l1b.plotfname+'_2.png', dpi=150)
 
 
 class DarkWriter:

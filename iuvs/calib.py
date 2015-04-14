@@ -95,3 +95,11 @@ def iuvs_dn_to_temp(dn, inverse=False, det_temp=True):
         else:
             T = dn
             return (T-b) / a
+
+
+def convert_det_temp_to_C(dn, inverse=False):
+    return iuvs_dn_to_temp(dn, inverse=inverse, det_temp=True)
+
+
+def convert_case_temp_to_C(dn, inverse=False):
+    return iuvs_dn_to_temp(dn, inverse=inverse, det_temp=False)

@@ -3,15 +3,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from numpy import ceil
-try:
-    from plotly.graph_objs import Heatmap, Scatter, Histogram, Data,\
-        Annotation, Annotations, Font, Marker
-    import plotly.tools as tls
-except ImportError:
-    print("Can't import plotly")
+# try:
+#     from plotly.graph_objs import Heatmap, Scatter, Histogram, Data,\
+#         Annotation, Annotations, Font, Marker
+#     import plotly.tools as tls
+# except ImportError:
+#     print("Can't import plotly")
 from moviepy.video.io.bindings import mplfig_to_npimage
 import moviepy.editor as mpy
 from .scaling import poly_fitting
+
+
+def calc_4_to_3(width):
+    height = width * 3 / 4
+    return (width, height)
 
 
 def get_pie_plot(df, col, ax=None):
@@ -24,7 +29,7 @@ def get_pie_plot(df, col, ax=None):
 
 def plot_pie_overview(df, cols, title, ncols=3):
     nrows = int(ceil(len(cols) / ncols))
-    scaler = 4
+    scaler = 3
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols*scaler,
                                                                 nrows*scaler))
     axes = axes.flatten()
@@ -43,67 +48,67 @@ def produce_pie_plots(df, folder):
         plt.close(fig)
 
 
-def make_plotly_multiplot(img, spatial=None, spectral=None, title='No title',
-                          width=None, height=None, zmin=None, zmax=None):
-    if spatial is None:
-        spatial = img.shape[0]//2
-    if spectral is None:
-        spectral = img.shape[1]//2
+# def make_plotly_multiplot(img, spatial=None, spectral=None, title='No title',
+#                           width=None, height=None, zmin=None, zmax=None):
+#     if spatial is None:
+#         spatial = img.shape[0]//2
+#     if spectral is None:
+#         spectral = img.shape[1]//2
 
-    prof1 = img[spatial]
-    prof2 = img[:, spectral]
+#     prof1 = img[spatial]
+#     prof2 = img[:, spectral]
 
-    if zmin is None:
-        p2, p98 = np.percentile(img, (2, 98))
-    else:
-        p2 = zmin
-        p98 = zmax
-    lowhist, p99 = np.percentile(img, (0.05, 99))
-    trace1 = Heatmap(z=np.flipud(img), zmin=p2, zmax=p98, zauto=False)
-    trace2 = Scatter(x=prof2,
-                     name='spatial profile',
-                     xaxis='x2',
-                     yaxis='y2',
-                     showlegend=False,
-                     mode='lines+markers')
-    trace3 = Scatter(y=prof1,
-                     name='spectral profile',
-                     xaxis='x3',
-                     yaxis='y3',
-                     showlegend=False,
-                     mode='lines+markers')
+#     if zmin is None:
+#         p2, p98 = np.percentile(img, (2, 98))
+#     else:
+#         p2 = zmin
+#         p98 = zmax
+#     lowhist, p99 = np.percentile(img, (0.05, 99))
+#     trace1 = Heatmap(z=np.flipud(img), zmin=p2, zmax=p98, zauto=False)
+#     trace2 = Scatter(x=prof2,
+#                      name='spatial profile',
+#                      xaxis='x2',
+#                      yaxis='y2',
+#                      showlegend=False,
+#                      mode='lines+markers')
+#     trace3 = Scatter(y=prof1,
+#                      name='spectral profile',
+#                      xaxis='x3',
+#                      yaxis='y3',
+#                      showlegend=False,
+#                      mode='lines+markers')
 
-    tohist = img[:, :50]
-    tohist = tohist[tohist < p99]
-    # tohist = tohist[tohist > lowhist]
-    trace4 = Histogram(x=tohist.ravel(),
-                       name='image histogram',
-                       xaxis='x4',
-                       yaxis='y4',
-                       showlegend=False,
-                       marker=Marker(
-                            color='blue',
-                            opacity=0.5)
-                       )
-    annotation = Annotation(x=0.95, y=0.4, xref='paper', yref='paper',
-                            text="Mean: {:.1f}<br>STD: {:.1f}".
-                                 format(tohist.mean(), tohist.std()),
-                            showarrow=False,
-                            font=Font(
-                                size=16,
-                                color='black'))
+#     tohist = img[:, :50]
+#     tohist = tohist[tohist < p99]
+#     # tohist = tohist[tohist > lowhist]
+#     trace4 = Histogram(x=tohist.ravel(),
+#                        name='image histogram',
+#                        xaxis='x4',
+#                        yaxis='y4',
+#                        showlegend=False,
+#                        marker=Marker(
+#                             color='blue',
+#                             opacity=0.5)
+#                        )
+#     annotation = Annotation(x=0.95, y=0.4, xref='paper', yref='paper',
+#                             text="Mean: {:.1f}<br>STD: {:.1f}".
+#                                  format(tohist.mean(), tohist.std()),
+#                             showarrow=False,
+#                             font=Font(
+#                                 size=16,
+#                                 color='black'))
 
-    data = Data([trace1, trace2, trace3, trace4])
+#     data = Data([trace1, trace2, trace3, trace4])
 
-    fig = tls.make_subplots(rows=2, cols=2, print_grid=False)
-    if width is not None:
-        fig['layout']['autosize'] = False
-        fig['layout']['width'] = width
-        fig['layout']['height'] = height
-    fig['layout']['annotations'] = Annotations([annotation])
-    fig['data'] += data
-    fig['layout'].update(title=title)
-    return fig
+#     fig = tls.make_subplots(rows=2, cols=2, print_grid=False)
+#     if width is not None:
+#         fig['layout']['autosize'] = False
+#         fig['layout']['width'] = width
+#         fig['layout']['height'] = height
+#     fig['layout']['annotations'] = Annotations([annotation])
+#     fig['data'] += data
+#     fig['layout'].update(title=title)
+#     return fig
 
 
 class L1BImageOperator(object):
