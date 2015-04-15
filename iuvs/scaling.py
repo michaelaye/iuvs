@@ -39,14 +39,17 @@ class DarkScaler:
     This is the base class that is inherited by the other scalers.
     """
 
-    def __init__(self, data_in, data_out):
+    def __init__(self, data_in, data_out, alternative=False):
         self.data_in = data_in
         self.data_out = data_out
+        self.alternative = alternative
 
     def do_fit(self):
         self.p, self.pcov = curve_fit(self.model,
                                       self.data_in.ravel(),
                                       self.data_out.ravel())
+        if self.alternative:
+            self.p = [self.expected()]
         self.perr = np.sqrt(np.diag(self.pcov))
 
     @property
@@ -92,6 +95,7 @@ class AddScaler(DarkScaler):
 class MultScaler(DarkScaler):
 
     """Pure Multiplicative scaling model"""
+
     name = 'MultScaler'
     rank = 0
 
@@ -259,7 +263,10 @@ def do_all(l1b, integration, log=False):
 
     spatial = l1b.spatial_size//2
     for Scaler, ax in zip(scalers, axes[3:]):
-        scaler = Scaler(dark_subframe, light_subframe)
+        if Scaler == MultScaler:
+            scaler = Scaler(dark_subframe, light_subframe, alternative=True)
+        else:
+            scaler = Scaler(dark_subframe, light_subframe)
         scaler.do_fit()
         fitted_dark = scaler.apply_fit(fulldark)
         sub = fullraw - fitted_dark
