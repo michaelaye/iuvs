@@ -249,13 +249,13 @@ def do_all(l1b, integration, log=False):
     else:
         min_, max_ = (-1, 3)
 
-    l1b.plot_some_profile('detector_background_subtracted', integration,
+    l1b.plot_some_profile('detector_dark_subtracted', integration,
                           ax=axes[2], scale=True, log=log)
-    dbs = l1b.get_integration('dbs_dn_s', integration)
-    subdbs = dbs[spa_slice, spe_slice]
+    dds = l1b.get_integration('dds_dn_s', integration)
+    subdds = dds[spa_slice, spe_slice]
     title = axes[2].get_title() + ', Mean:{:.1f}, STD:{:.3f}'\
-                                  .format(subdbs.mean(),
-                                          subdbs.std())
+                                  .format(subdds.mean(),
+                                          subdds.std())
 
     axes[2].set_title('')
     axes[2].text(.5, .9, title, horizontalalignment='center',

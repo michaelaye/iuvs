@@ -53,6 +53,17 @@ def get_filenames(level, pattern=None, stage=True, ext='.fits.gz',
 
 
 def l1a_filenames(pattern=None, **kwargs):
+    """Search for L1A filenames with patterns.
+
+    <pattern> will be bracketed with '*', so needs to be correct in itself.
+    For example "mode080-fuv" but not "mode080fuv".
+
+    kwargs
+    ======
+        stage: False/True (gives production files if False). Default: True
+        ext: Extension is by default .fits.gz Use this to search for other
+             files like .txt
+    """
     return get_filenames('l1a', pattern=pattern, **kwargs)
 
 
@@ -487,8 +498,8 @@ class L1BReader(FitsFile):
         return (self.detector_dark / self.scaling_factor) + 0.001
 
     @property
-    def dbs_dn_s(self):
-        return (self.detector_background_subtracted / self.scaling_factor)+0.001
+    def dds_dn_s(self):
+        return (self.detector_dark_subtracted / self.scaling_factor)+0.001
 
     def plot_raw_spectrogram(self, integration=None, ax=None,
                              cmap=None, cbar=True, log=False,

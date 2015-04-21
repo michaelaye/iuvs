@@ -241,7 +241,7 @@ def plot_profiles(l1b, spatialslice, spectralslice, integration):
     min_, max_ = np.percentile(sub, (2, 92))
 
     # old subtraction from L1B file
-    l1b.plot_some_profile('detector_background_subtracted', integration,
+    l1b.plot_some_profile('detector_dark_subtracted', integration,
                           spatial=spatial, ax=axes[2], scale=True)
     axes[2].set_ylim(min_, max_)
     axes[2].set_title('subtracted from L1B file, y-axis same as last profile')
