@@ -490,6 +490,10 @@ class L1BReader(FitsFile):
         self.darks_interpolated = self.background_dark
 
     @property
+    def n_darks(self):
+        return self.detector_dark.shape[0]
+
+    @property
     def raw_dn_s(self):
         return (self.detector_raw / self.scaling_factor) + 0.001
 
@@ -515,12 +519,12 @@ class L1BReader(FitsFile):
                                           set_extent=set_extent,
                                           **kwargs)
 
-    def plot_dark_spectogram(self, integration=None, ax=None,
-                             cmap=None, cbar=True, log=False,
-                             **kwargs):
+    def plot_dark_spectrogram(self, integration=None, ax=None,
+                              cmap=None, cbar=True, log=False,
+                              **kwargs):
         dark = self.get_integration('dark_dn_s', integration)
         title = ("Dark spectogram, integration {} out of {}"
-                 .format(integration, self.n_integrations))
+                 .format(integration, self.n_darks))
         return self.plot_some_spectrogram(dark, title, ax,
                                           cmap, cbar, log, **kwargs)
 
@@ -582,6 +586,27 @@ class L1BReader(FitsFile):
         light = self.get_integration('raw_dn_s', integration)
         dark = self.get_integration('dark_dn_s', integration)
         return light, dark
+
+    def show_all_darks(self):
+        fig, axes = plt.subplots(nrows=self.n_darks, sharex=True)
+        for ax, i_dark in zip(axes.ravel(), range(self.n_darks)):
+            self.plot_dark_spectrogram(i_dark, ax=ax)
+        for ax in axes[:-1]:
+            ax.set_xlabel('')
+
+    def profile_all_darks(self):
+        fig, axes = plt.subplots()
+        for i, dark in enumerate(self.dark_dn_s):
+            axes.plot(self.wavelengths[0],
+                      dark.mean(axis=0), label=i, lw=2)
+        axes.legend(loc='best')
+        axes.set_xlim((self.wavelengths[0][0],
+                       self.wavelengths[0][-1]))
+        axes.set_xlabel("Wavelength [nm]")
+        axes.set_ylabel("DN / s")
+        axes.set_title("{}\nSpatial mean profiles of darks."
+                       .format(self.plottitle),
+                       fontsize=14)
 
 
 def get_rectangle(spectogram):
