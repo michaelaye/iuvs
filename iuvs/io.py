@@ -256,7 +256,7 @@ class FitsFile:
 
     @property
     def wavelengths(self):
-        return self.Observation['WAVELENGTH']
+        return self.Observation['WAVELENGTH'][0]
 
     @property
     def img_header(self):
@@ -311,10 +311,13 @@ class FitsFile:
         savename = kwargs.pop('savename', False)
         if log:
             spec = np.log10(inspec)
-            vmax = 2.5
-            vmin = -3.0
+            vmax = 2.5 if vmax is None else vmax
+            vmin = -3.0 if vmin is None else vmin
         else:
             spec = inspec
+            vmax = 10 if vmax is None else vmax
+            vmin = 0 if vmin is None else vmin
+
         if cmap is None:
             cmap = mycmap
 
@@ -543,7 +546,11 @@ class L1BReader(FitsFile):
 
     @property
     def dds_dn_s(self):
-        return (self.detector_dark_subtracted / self.scaling_factor)+0.001
+        try:
+            dds = self.detector_dark_subtracted
+        except AttributeError:
+            dds = self.detector_background_subtracted
+        return (dds / self.scaling_factor)+0.001
 
     def plot_raw_spectrogram(self, integration=None, ax=None,
                              cmap=None, cbar=True, log=False,
