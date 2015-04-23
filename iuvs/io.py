@@ -371,7 +371,8 @@ class FitsFile:
 
     def plot_some_profile(self, data_attr, integration,
                           spatial=None, ax=None, scale=False,
-                          log=False, spa_average=False, **kwargs):
+                          log=False, spa_average=False, title=None,
+                          **kwargs):
         plot_hist = kwargs.pop('plot_hist', False)
         savename = kwargs.pop('savename', False)
         spec = self.get_integration(data_attr, integration)
@@ -381,13 +382,14 @@ class FitsFile:
             # if no spatial bin given, take the middle one
             spatial = self.spatial_size//2
 
-        if not spa_average:
-            title = ("Profile of {} at spatial: {}, integration {} of {}"
-                     .format(data_attr, spatial, integration,
-                             self.n_integrations))
-        else:
-            title = ("Profile of {}, spatial mean. Integration {} of {}"
-                     .format(data_attr, integration, self.n_integrations))
+        if title is not None:
+            if not spa_average:
+                title = ("Profile of {} at spatial: {}, integration {} of {}"
+                         .format(data_attr, spatial, integration,
+                                 self.n_integrations))
+            else:
+                title = ("Profile of {}, spatial mean. Integration {} of {}"
+                         .format(data_attr, integration, self.n_integrations))
         if ax is None:
             fig, ax = plt.subplots()
             fig.suptitle(self.plottitle, fontsize=12)
