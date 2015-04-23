@@ -438,10 +438,11 @@ class FitsFile:
 
     def plot_img_profile(self, integration=None, ax=None, log=True,
                          **kwargs):
-        title = ("Primary header spectrogram, profile. Integration {}"
-                 " out of {}".format(integration, self.n_integrations))
         return self.plot_some_profile('img', integration, ax=ax,
                                       **kwargs)
+
+    def image_stats(self):
+        return image_stats(self.img)
 
 
 class L1AReader(FitsFile):
