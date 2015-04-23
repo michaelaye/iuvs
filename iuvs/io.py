@@ -217,6 +217,7 @@ class FitsFile:
         if type(fname) == list:
             fname = fname[0]
         self.fname = fname
+        self.iuvsfname = Filename(fname)
         self.hdulist = fits.open(fname)
 
     @property
@@ -255,7 +256,7 @@ class FitsFile:
 
     @property
     def wavelengths(self):
-        return self.Observation.field(18)[0]
+        return self.Observation['WAVELENGTH']
 
     @property
     def img_header(self):
@@ -382,7 +383,7 @@ class FitsFile:
             # if no spatial bin given, take the middle one
             spatial = self.spatial_size//2
 
-        if title is not None:
+        if title is None:
             if not spa_average:
                 title = ("Profile of {} at spatial: {}, integration {} of {}"
                          .format(data_attr, spatial, integration,
@@ -507,15 +508,15 @@ class L1BReader(FitsFile):
 
     @property
     def dark_det_temps(self):
-        return self.Dark_Integration.field(7)
+        return self.Dark_Integration['DET_TEMP_C']
 
     @property
     def dark_case_temps(self):
-        return self.Dark_Integration.field(8)
+        return self.Dark_Integration['CASE_TEMP_C']
 
     @property
     def dark_times(self):
-        utcs = self.Dark_Integration.field(2)
+        utcs = self.Dark_Integration['UTC']
         times = []
         for utc in utcs:
             times.append(self.parse_UTC_string(utc))
@@ -619,6 +620,10 @@ class L1BReader(FitsFile):
 
     def plot_dark_profile(self, integration, ax=None, log=None):
         return self.plot_some_profile('dark_dn_s', integration,
+                                      ax=ax, log=log)
+
+    def plot_dds_profile(self, integration, ax=None, log=None):
+        return self.plot_some_profile('dds_dn_s', integration,
                                       ax=ax, log=log)
 
     def get_light_and_dark(self, integration):
