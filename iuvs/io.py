@@ -519,7 +519,7 @@ class L1BReader(FitsFile):
         times = []
         for utc in utcs:
             times.append(self.parse_UTC_string(utc))
-        return times
+        return pd.TimeSeries(times)
 
     def parse_UTC_string(self, s):
         fmt = '%Y/%j %b %d %H:%M:%S%Z'
