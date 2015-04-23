@@ -198,16 +198,104 @@ class PolyScalerManager:
 
 
 class DarkFitter:
+    Scalers = [AddScaler, MultScaler, PolyScaler1,
+               PolyScaler2]
 
-    def __init__(self, fname):
-        self.fname = fname
-        l1b = io.L1BReader(fname)
-        self.l1b = l1b
-        darkout = l1b.detector_dark[-1]
-        darkin = l1b.detector_dark[-2]
-        scaler = PolyScaler(darkin, darkout)
-        scaler.do_fit()
-        self.scaler = scaler
+    def __init__(self, fname_or_l1b, raw_integration, dark_integration):
+        if isinstance(fname_or_l1b, io.L1BReader):
+            self.l1b = fname_or_l1b
+            l1b = fname_or_l1b
+            self.fname = self.l1b.fname
+        else:
+            self.fname = fname_or_l1b
+            l1b = io.L1BReader(fname_or_l1b)
+            self.l1b = l1b
+        self.raw_integration = raw_integration
+        self.dark_integration = dark_integration
+
+        fullraw = l1b.get_integration('raw_dn_s', raw_integration)
+        fulldark = l1b.get_integration('dark_dn_s', dark_integration)
+        self.fullraw = fullraw
+        self.fulldark = fulldark
+
+        # get the calm scaling window
+        spa_slice, spe_slice = l1b.find_scaling_window(fullraw)
+        raw_subframe = fullraw[spa_slice, spe_slice]
+        dark_subframe = fulldark[spa_slice, spe_slice]
+        self.spa_slice = spa_slice
+        self.spe_slice = spe_slice
+
+        # this container will keep all scaler objects.
+        self.scalers = []
+        for Scaler in self.Scalers:
+            scaler = Scaler(dark_subframe, raw_subframe)
+            scaler.do_fit()
+            self.scalers.append(scaler)
+
+    def get_title_data(self, data):
+        subdata = data[self.spa_slice, self.spe_slice]
+        return subdata.mean(), subdata.std()
+
+    def plot_profiles(self, save_token=None):
+        fig, axes = plt.subplots(nrows=len(self.scalers)+3, sharex=True)
+
+        # raw profile
+        self.l1b.plot_raw_profile(self.raw_integration, ax=axes[0], log=False)
+
+        # dark profile
+        self.l1b.plot_dark_profile(self.dark_integration, ax=axes[1], log=False)
+
+        # background subtracted
+        self.l1b.plot_dds_profile(self.raw_integration,
+                                  ax=axes[2], log=False)
+        dds = self.l1b.dds_dn_s[self.raw_integration]
+        title = axes[2].get_title() + ', Mean:{:.1f}, STD:{:.3f}'\
+                                      .format(*self.get_title_data(dds))
+        axes[2].set_title('')
+        axes[2].text(.5, .9, title, horizontalalignment='center',
+                     transform=axes[2].transAxes, fontsize=10)
+
+        # scaled fits
+        spatial = self.l1b.spatial_size//2
+        for scaler, ax in zip(self.scalers, axes[3:]):
+            fitted_dark = scaler.apply_fit(self.fulldark)
+            sub = self.fullraw - fitted_dark
+            mean, std = self.get_title_data(sub)
+            ax.plot(self.l1b.wavelengths[self.raw_integration], sub[spatial])
+            ax.set_ylabel('DN/s')
+
+            ax.set_xlim((self.l1b.wavelengths[self.raw_integration][0],
+                         self.l1b.wavelengths[self.raw_integration][-1]))
+            parameters = scaler.p_formatted
+            title = ("{}, {}. Mean:{:.1f}, STD:{:.3f}".format(scaler.name,
+                                                              parameters,
+                                                              mean, std))
+            ax.text(.5, .9, title, horizontalalignment='center',
+                    transform=ax.transAxes, fontsize=10)
+
+        # min_, max_ = get_min_max(l1b, integration, spa_slice, spe_slice)
+        if int(self.l1b.int_time) == 1:
+            min_, max_ = (-5, 15)
+        else:
+            min_, max_ = (-1, 3)
+
+        for ax in axes:
+            ax.set_xlabel('')
+            ax.locator_params(axis='y', nbins=6)
+            ax.set_ylim(min_, max_)
+
+        axes[-1].set_xlabel("Wavelength [nm]")
+        fig.suptitle("{}\nProfiles at middle spatial, Window: [{}:{}, {}:{}]\n"
+                     .format(self.l1b.plottitle,
+                             self.spa_slice.start,
+                             self.spa_slice.stop,
+                             self.spe_slice.start,
+                             self.spe_slice.stop),
+                     fontsize=11)
+        fig.subplots_adjust(top=0.90, bottom=0.07)
+        if save_token is not None:
+            fname = io.HOME / 'plots' / (self.l1b.plotfname+'_2_'+save_token+'.png')
+            fig.savefig(str(fname), dpi=150)
 
 
 def poly_fitting(l1b, integration, spatialslice, spectralslice):
@@ -227,8 +315,9 @@ def get_min_max(l1b, integration, spa_slice, spe_slice):
     return min_, max_
 
 
-def do_all(l1b, integration, log=False):
-    fullraw, fulldark = l1b.get_light_and_dark(integration)
+def do_all(l1b, integration, fullraw=None, fulldark=None, log=False):
+    if fullraw is None or fulldark is None:
+        fullraw, fulldark = l1b.get_light_and_dark(integration)
     spa_slice, spe_slice = l1b.find_scaling_window(fullraw)
     light_subframe = fullraw[spa_slice, spe_slice]
     dark_subframe = fulldark[spa_slice, spe_slice]
