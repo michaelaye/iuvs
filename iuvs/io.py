@@ -168,6 +168,8 @@ class Filename:
             self.cycle_orbit = 'N/A'
         self.time = dt.datetime.strptime(self.timestr,
                                          '%Y%m%dT%H%M%S')
+        self.version_string = self.version + self.revision
+        self.obs_id = '_'.join(self.basename.split('_')[:5])
 
     def __eq__(self, other):
         weak_equality = ['mission', 'instrument', 'level', 'phase', 'timestr']
@@ -488,6 +490,29 @@ class L1BReader(FitsFile):
             else:
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
         self.darks_interpolated = self.background_dark
+
+    @property
+    def dark_det_temps(self):
+        return self.Dark_Integration.field(7)
+
+    @property
+    def dark_case_temps(self):
+        return self.Dark_Integration.field(8)
+
+    @property
+    def dark_times(self):
+        utcs = self.Dark_Integration.field(2)
+        times = []
+        for utc in utcs:
+            times.append(self.parse_UTC_string(utc))
+        return times
+
+    def parse_UTC_string(self, s):
+        fmt = '%Y/%j %b %d %H:%M:%S%Z'
+        s1, s2 = s.split('.')
+        t = dt.datetime.strptime(s1+'UTC', fmt)
+        tdelta = dt.timedelta(microseconds=int(s2[:-3]))
+        return t+tdelta
 
     @property
     def n_darks(self):
