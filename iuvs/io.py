@@ -188,8 +188,19 @@ class Filename:
         else:
             return False
 
-    def image_stats(self):
-        return image_stats(self.img)
+    def formatter(self, itemstr):
+        return "{}: {}\n".format(itemstr.capitalize(), getattr(self, itemstr))
+
+    def __repr__(self):
+        items = ('basename mission instrument level phase cycle_orbit mode channel'
+                 ' version revision time'.split())
+        s = ''
+        for item in items:
+            s += self.formatter(item)
+        return s
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class FitsBinTable:
