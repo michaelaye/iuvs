@@ -46,10 +46,3 @@ def produce_summary_txt(df, outfname):
     pd.set_option("display.max_colwidth", oldwidth)
 
 
-def main():
-    df = pd.read_hdf(str(io.HOME / 'l1a_summary.h5', 'df'))
-
-
-
-if __name__ == '__main__':
-    main()
