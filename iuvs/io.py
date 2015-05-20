@@ -396,6 +396,10 @@ class FitsFile:
         plot_hist = kwargs.pop('plot_hist', False)
         savename = kwargs.pop('savename', False)
         spec = self.get_integration(data_attr, integration)
+        if 'dark' in data_attr:
+            nints = self.n_darks
+        else:
+            nints = self.n_integrations
         if scale:
             spec = spec / self.scaling_factor
         if spatial is None:
@@ -405,11 +409,10 @@ class FitsFile:
         if title is None:
             if not spa_average:
                 title = ("Profile of {} at spatial: {}, integration {} of {}"
-                         .format(data_attr, spatial, integration,
-                                 self.n_integrations))
+                         .format(data_attr, spatial, integration, nints))
             else:
                 title = ("Profile of {}, spatial mean. Integration {} of {}"
-                         .format(data_attr, integration, self.n_integrations))
+                         .format(data_attr, integration, nints))
         if ax is None:
             fig, ax = plt.subplots()
             fig.suptitle(self.plottitle, fontsize=12)
