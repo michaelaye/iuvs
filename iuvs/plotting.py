@@ -12,6 +12,9 @@ from numpy import ceil
 from moviepy.video.io.bindings import mplfig_to_npimage
 import moviepy.editor as mpy
 from .scaling import poly_fitting
+from . import io
+import sys
+import pandas as pd
 
 
 def calc_4_to_3(width):
@@ -47,6 +50,18 @@ def produce_pie_plots(df, folder):
         plt.savefig(path, dpi=100)
         plt.close(fig)
 
+
+def plot_times(df, savename='times.png'):
+    fig, ax = plt.subplots()
+    for i, fname in enumerate(df.fname.iloc[:-1]):
+        print(fname)
+        sys.stdout.flush()
+        l1b = io.L1BReader(fname)
+        ints = pd.TimeSeries(i, index=l1b.integration_times)
+        darks = pd.TimeSeries(i, index=l1b.dark_times)
+        ints.plot(style='*', ax=ax)
+        darks.plot(style='*', ax=ax)
+    plt.savefig(savename, dpi=150)
 
 # def make_plotly_multiplot(img, spatial=None, spectral=None, title='No title',
 #                           width=None, height=None, zmin=None, zmax=None):
