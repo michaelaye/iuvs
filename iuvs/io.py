@@ -205,15 +205,34 @@ class Filename:
 
 class FitsBinTable:
 
+    """Convert a binary Fits table to a pandas table.
+
+    Attributes
+    ==========
+    header: links to the header of the provided HDU
+    data: contains the pandas DataFrame with the HDU.data
+    """
+
     def __init__(self, hdu):
         self.header = hdu.header
         self.data = pd.DataFrame(hdu.data).T
 
 
+def iuvs_utc_to_dtime(utcstring):
+    "Convert the IUVS UTC string to a dtime object."
+    cleaned = utcstring[:-3]+'0UTC'
+    time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f%Z')
+    return time
+
+
 class FitsFile:
 
     def __init__(self, fname):
-        """fname needs to be absolute complete path. """
+        """Base class for L1A/B Reader.
+
+        Input:
+            fname: needs to be absolute complete path. (To be tested.)
+        """
         if type(fname) == list:
             fname = fname[0]
         self.fname = fname
@@ -284,10 +303,7 @@ class FitsFile:
     @property
     def capture(self):
         string = self.img_header['CAPTURE']
-        import datetime as dt
-        cleaned = string[:-3]+'0'
-        time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f')
-        return time
+        return iuvs_utc_to_dtime(string)
 
     def get_integration(self, data_attr, integration):
         data = getattr(self, data_attr)
@@ -522,15 +538,8 @@ class L1BReader(FitsFile):
         utcs = self.Dark_Integration['UTC']
         times = []
         for utc in utcs:
-            times.append(self.parse_UTC_string(utc))
+            times.append(iuvs_utc_to_dtime(utc))
         return pd.TimeSeries(times)
-
-    def parse_UTC_string(self, s):
-        fmt = '%Y/%j %b %d %H:%M:%S%Z'
-        s1, s2 = s.split('.')
-        t = dt.datetime.strptime(s1+'UTC', fmt)
-        tdelta = dt.timedelta(microseconds=int(s2[:-3]))
-        return t+tdelta
 
     @property
     def n_darks(self):
