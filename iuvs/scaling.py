@@ -228,7 +228,11 @@ class DarkFitter:
         # this container will keep all scaler objects.
         self.scalers = []
         for Scaler in self.Scalers:
-            scaler = Scaler(dark_subframe, raw_subframe)
+            if Scaler == MultScaler:
+                scaler = Scaler(dark_subframe, raw_subframe, alternative=True)
+            else:
+                scaler = Scaler(dark_subframe, raw_subframe)
+
             scaler.do_fit()
             self.scalers.append(scaler)
 
