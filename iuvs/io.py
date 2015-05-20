@@ -305,6 +305,11 @@ class FitsFile:
         string = self.img_header['CAPTURE']
         return iuvs_utc_to_dtime(string)
 
+    @property
+    def integration_times(self):
+        "Convert times from Integration table to pandas TimeSeries"
+        return self.Integration.loc['UTC'].map(iuvs_utc_to_dtime)
+
     def get_integration(self, data_attr, integration):
         data = getattr(self, data_attr)
         if data.ndim == 3:
