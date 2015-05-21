@@ -51,7 +51,7 @@ def produce_pie_plots(df, folder):
         plt.close(fig)
 
 
-def plot_times(df, savename='times.png'):
+def plot_times(df, savename='times.png', verbose=False):
     fig, ax = plt.subplots()
     for i, fname in enumerate(df.fname.iloc[:-1]):
         print(fname)
@@ -59,6 +59,10 @@ def plot_times(df, savename='times.png'):
         l1b = io.L1BReader(fname)
         ints = pd.TimeSeries(i, index=l1b.integration_times)
         darks = pd.TimeSeries(i, index=l1b.dark_times)
+        if verbose:
+            print("Darks:\n{}".format(l1b.dark_times))
+            print("Integrations:\n{}\n{}".format(l1b.integration_times.iloc[0],
+                                                 l1b.integration_times.iloc[-1]))
         ints.plot(style='*', ax=ax)
         darks.plot(style='*', ax=ax)
     plt.savefig(savename, dpi=150)
