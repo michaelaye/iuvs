@@ -57,3 +57,11 @@ def test_multscaler_random():
     e = 1e-10
     expected = target/start
     assert (expected - scaler.p[0]) < e
+
+
+def test_polyscaler_p_dict():
+    "check if the p_dict is created properly."
+    spec, dark = get_ordered_arrays()
+    scaler = scaling.MultScaler(dark[xslice, yslice], spec[xslice, yslice])
+    scaler.do_fit()
+    assert int(scaler.p_dict['poly1_0']) == 2
