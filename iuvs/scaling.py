@@ -49,7 +49,7 @@ class DarkScaler:
                                       self.data_in.ravel(),
                                       self.data_out.ravel())
         if self.alternative:
-            self.p = [self.expected()]
+            self.p = np.array([self.expected()])
         self.perr = np.sqrt(np.diag(self.pcov))
 
     @property
@@ -77,6 +77,12 @@ class DarkScaler:
     @property
     def p_formatted(self):
         return list(reversed(["{:.3f}".format(i) for i in self.p]))
+
+    @property
+    def p_dict(self):
+        d = dict()
+        d[self.name] = float(self.p)
+        return d
 
 
 class AddScaler(DarkScaler):
@@ -144,6 +150,13 @@ class PolyScaler(DarkScaler):
     def perr(self):
         print("Not defined yet for PolyFitter.")
         return
+
+    @property
+    def p_dict(self):
+        d = dict()
+        for i, item in enumerate(self.p):
+            d['poly{}_{}'.format(self.rank, i)] = item
+        return d
 
 
 class PolyScaler1(PolyScaler):
@@ -219,22 +232,30 @@ class DarkFitter:
         self.fulldark = fulldark
 
         # get the calm scaling window
-        spa_slice, spe_slice = l1b.find_scaling_window(fullraw)
-        raw_subframe = fullraw[spa_slice, spe_slice]
-        dark_subframe = fulldark[spa_slice, spe_slice]
-        self.spa_slice = spa_slice
-        self.spe_slice = spe_slice
+        self.define_scaling_window()
 
         # this container will keep all scaler objects.
         self.scalers = []
+        self.p_dicts = {}
         for Scaler in self.Scalers:
             if Scaler == MultScaler:
-                scaler = Scaler(dark_subframe, raw_subframe, alternative=True)
+                scaler = Scaler(self.dark_subframe,
+                                self.raw_subframe,
+                                alternative=True)
             else:
-                scaler = Scaler(dark_subframe, raw_subframe)
+                scaler = Scaler(self.dark_subframe,
+                                self.raw_subframe)
 
             scaler.do_fit()
             self.scalers.append(scaler)
+            self.p_dicts.update(scaler.p_dict)
+
+    def define_scaling_window(self):
+        spa_slice, spe_slice = self.l1b.find_scaling_window(self.fullraw)
+        self.raw_subframe = self.fullraw[spa_slice, spe_slice]
+        self.dark_subframe = self.fulldark[spa_slice, spe_slice]
+        self.spa_slice = spa_slice
+        self.spe_slice = spe_slice
 
     def get_title_data(self, data):
         subdata = data[self.spa_slice, self.spe_slice]
