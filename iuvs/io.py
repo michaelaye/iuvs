@@ -9,7 +9,6 @@ import numpy as np
 from scipy.ndimage.filters import generic_filter
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -360,7 +359,7 @@ class FitsFile:
                            aspect='auto',
                            **kwargs)
         else:
-            im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax,
+            im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax, aspect='auto',
                            **kwargs)
         ax.set_title(title)
         if set_extent:
