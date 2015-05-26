@@ -9,6 +9,7 @@ import numpy as np
 from scipy.ndimage.filters import generic_filter
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -354,7 +355,9 @@ class FitsFile:
                            cmap=cmap,
                            extent=(waves[0], waves[-1],
                                    len(spec), 0),
-                           vmin=vmin, vmax=vmax,
+                           vmin=vmin,
+                           vmax=vmax,
+                           aspect='auto',
                            **kwargs)
         else:
             im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax,
@@ -506,12 +509,11 @@ class L1BReader(FitsFile):
 
     """For Level1B"""
 
-    works_with_dataframes = [
-        'DarkIntegration',
-        'DarkEngineering',
-        'background_light_source',
-        'Integration',
-        'Engineering']
+    works_with_dataframes = ['DarkIntegration',
+                             'DarkEngineering',
+                             'background_light_source',
+                             'Integration',
+                             'Engineering']
 
     def __init__(self, fname, stage=True):
 
@@ -614,21 +616,50 @@ class L1BReader(FitsFile):
 
         # colorbar
         im = ax.get_images()[0]
-        cb = plt.colorbar(im, ax=axes.tolist())
+        fig.tight_layout()
+        fig.subplots_adjust(top=0.9, bottom=0.1)
+        # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+        # cb = plt.colorbar(im, cax=cbar_ax)
+        cb = plt.colorbar(im, ax=axes.ravel().tolist())
+        # cb = plt.colorbar(im, ax=axes[0])
         if imglog:
-            label = 'log(DN/s)'
+            label = '  log(DN/s)'
         else:
-            label = 'DN/s'
-        cb.set_label(label, fontsize=14, rotation=0)
+            label = '  DN/s'
+        cb.set_label(label, fontsize=13, rotation=0)
 
-        # fig.tight_layout()
-        # fig.subplots_adjust(top=0.9, bottom=0.1, right=0.75)
         if save_token is not None:
             fname = "{}_{}.png".format(self.plotfname,
                                        save_token)
             fig.savefig(os.path.join(str(plotfolder), fname), dpi=150)
 
         return fig
+
+    def plot_mean_raw_values(self):
+        fig, ax = plt.subplots()
+        fig.suptitle(self.plottitle)
+        ax.plot(self.raw_dn_s.mean(axis=(1, 2)))
+        ax.set_xlabel("Integration number")
+        ax.set_ylabel("DN / s")
+        ax.set_title("Mean raw DN/s over observation (i.e. L1B file)")
+        plt.savefig('/home/klay6683/plots/mean_raw_increase_over_obs.png',
+                    dpi=120)
+
+    def plot_dark_spectrograms(self):
+        fig, axes = plt.subplots(nrows=self.n_darks, sharex=True)
+        fig.suptitle(self.plottitle)
+        for i, ax in zip(range(self.n_darks), axes):
+            self.plot_dark_spectrogram(integration=i, ax=ax)
+            if i < self.n_darks-1:
+                ax.set_xlabel('')
+
+    def plot_dark_histograms(self):
+        fig, ax = plt.subplots()
+        for i, dark in enumerate(self.dark_dn_s):
+            ax.hist(dark.ravel(), 100, log=True,
+                    label="dark{}".format(i), alpha=0.5)
+        plt.legend()
+        ax.set_title('Dark histograms')
 
     def find_scaling_window(self, spec):
         self.spa_slice, self.spe_slice = find_scaling_window(spec)
