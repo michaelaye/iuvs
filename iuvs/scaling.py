@@ -154,7 +154,7 @@ class PolyScaler(DarkScaler):
     @property
     def p_dict(self):
         d = dict()
-        for i, item in enumerate(self.p):
+        for i, item in enumerate(self.p[::-1]):
             d['poly{}_{}'.format(self.rank, i)] = item
         return d
 
