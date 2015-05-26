@@ -1,5 +1,8 @@
 import time
 import sys
+from IPython.html.widgets import FloatProgress, IntProgress
+from IPython.display import display
+from numpy import linspace
 
 
 def progress_display(results, objectlist, sleep=10):
@@ -7,3 +10,19 @@ def progress_display(results, objectlist, sleep=10):
         print("{:.1f} % done.".format(100*results.progress/len(objectlist)))
         sys.stdout.flush()
         time.sleep(sleep)
+
+
+def int_progress(min, max):
+    prog = IntProgress(min=min, max=max)
+    display(prog)
+    for i in linspace(min, max, 25):
+        time.sleep(0.1)
+        prog.value = i
+
+
+def float_progress(min, max):
+    prog = FloatProgress(min=min, max=max)
+    display(prog)
+    for i in linspace(min, max, 100):
+        time.sleep(0.1)
+        prog.value = i
