@@ -634,16 +634,22 @@ class L1BReader(FitsFile):
 
         return fig
 
-    def plot_mean_raw_values(self):
+    def plot_mean_values(self, item):
         fig, ax = plt.subplots()
         fig.suptitle(self.plottitle)
-        ax.plot(self.raw_dn_s.mean(axis=(1, 2)))
+        ax.plot(getattr(self, item).mean(axis=(1, 2)))
         ax.set_xlabel("Integration number")
         ax.set_ylabel("DN / s")
-        ax.set_title("Mean raw DN/s over observation (i.e. L1B file)")
+        ax.set_title("Mean {}} over observation (i.e. L1B file)".format(item))
         savename = os.path.join(str(plotfolder),
-                                self.plotfname + 'mean_raw_over_obs.png')
+                                self.plotfname + 'mean_{}.png'.format(item))
         plt.savefig(savename, dpi=120)
+
+    def plot_mean_raw_values(self):
+        self.plot_mean_values('raw_dn_s')
+
+    def plot_mean_dds_values(self):
+        self.plot_mean_values('dds_dn_s')
 
     def plot_dark_spectrograms(self):
         fig, axes = plt.subplots(nrows=self.n_darks, sharex=True)
