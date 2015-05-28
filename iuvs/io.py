@@ -641,8 +641,9 @@ class L1BReader(FitsFile):
         ax.set_xlabel("Integration number")
         ax.set_ylabel("DN / s")
         ax.set_title("Mean raw DN/s over observation (i.e. L1B file)")
-        plt.savefig('/home/klay6683/plots/mean_raw_increase_over_obs.png',
-                    dpi=120)
+        savename = os.path.join(str(plotfolder),
+                                self.plotfname + 'mean_raw_over_obs.png')
+        plt.savefig(savename, dpi=120)
 
     def plot_dark_spectrograms(self):
         fig, axes = plt.subplots(nrows=self.n_darks, sharex=True)
@@ -651,14 +652,20 @@ class L1BReader(FitsFile):
             self.plot_dark_spectrogram(integration=i, ax=ax)
             if i < self.n_darks-1:
                 ax.set_xlabel('')
+        savename = os.path.join(str(plotfolder), self.plotfname + '_dark_spectograms.png')
+        plt.savefig(savename, dpi=150)
 
-    def plot_dark_histograms(self):
+    def plot_dark_histograms(self, save=False):
         fig, ax = plt.subplots()
         for i, dark in enumerate(self.dark_dn_s):
             ax.hist(dark.ravel(), 100, log=True,
                     label="dark{}".format(i), alpha=0.5)
         plt.legend()
-        ax.set_title('Dark histograms')
+        fig.suptitle(self.plottitle)
+        ax.set_title('Dark histograms, DN / s')
+        if save:
+            savename = os.path.join(str(plotfolder), self.plotfname + '_dark_histograms.png')
+            plt.savefig(savename, dpi=150)
 
     def find_scaling_window(self, spec):
         self.spa_slice, self.spe_slice = find_scaling_window(spec)
