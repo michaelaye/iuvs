@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from numpy import ceil
+import seaborn as sns
+
 # try:
 #     from plotly.graph_objs import Heatmap, Scatter, Histogram, Data,\
 #         Annotation, Annotations, Font, Marker
@@ -66,6 +68,13 @@ def plot_times(df, savename='times.png', verbose=False):
         ints.plot(style='*', ax=ax)
         darks.plot(style='*', ax=ax)
     plt.savefig(savename, dpi=150)
+
+
+def raw_violins(l1b):
+    df = pd.DataFrame(l1b.raw_dn_s.reshape(l1b.n_integrations, -1)).T
+    plt.figure()
+    sns.violinplot(data=df)
+
 
 # def make_plotly_multiplot(img, spatial=None, spectral=None, title='No title',
 #                           width=None, height=None, zmin=None, zmax=None):
