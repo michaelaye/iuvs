@@ -640,7 +640,7 @@ class L1BReader(FitsFile):
         ax.plot(getattr(self, item).mean(axis=(1, 2)))
         ax.set_xlabel("Integration number")
         ax.set_ylabel("DN / s")
-        ax.set_title("Mean {}} over observation (i.e. L1B file)".format(item))
+        ax.set_title("Mean {} over observation (i.e. L1B file)".format(item))
         savename = os.path.join(str(plotfolder),
                                 self.plotfname + 'mean_{}.png'.format(item))
         plt.savefig(savename, dpi=120)
