@@ -254,9 +254,8 @@ class DarkFitter:
             self.dark_subframe = self.fulldark[self.spa_slice, self.spe_slice]
 
         # calculate current residual
-        currentsub = self.fullraw - l1b.dds_dn_s[raw_integration]
+        currentsub = l1b.get_integration('dds_dn_s', raw_integration)
         self.currentresidual = currentsub[self.spa_slice, self.spe_slice]
-
         # this container will keep all scaler objects.
         self.scalers = []
         self.p_dicts = {}
