@@ -84,6 +84,18 @@ class DarkScaler:
         d[self.name] = float(self.p)
         return d
 
+    @property
+    def residual_mean_dict(self):
+        d = dict()
+        d[self.name] = float(self.residual.mean())
+        return d
+
+    @property
+    def residual_std_dict(self):
+        d = dict()
+        d[self.name] = float(self.residual.std())
+        return d
+
 
 class AddScaler(DarkScaler):
 
@@ -214,8 +226,9 @@ class DarkFitter:
     Scalers = [AddScaler, MultScaler, PolyScaler1,
                PolyScaler2]
 
-    def __init__(self, fname_or_l1b, raw_integration, dark_integration):
-        if isinstance(fname_or_l1b, io.L1BReader):
+    def __init__(self, fname_or_l1b, raw_integration, dark_integration,
+                 spa_slice=None, spe_slice=None):
+        if hasattr(fname_or_l1b, 'fname'):  # only true if it is type(L1BReader)
             self.l1b = fname_or_l1b
             l1b = fname_or_l1b
             self.fname = self.l1b.fname
@@ -232,11 +245,22 @@ class DarkFitter:
         self.fulldark = fulldark
 
         # get the calm scaling window
-        self.define_scaling_window()
+        if spa_slice is None:
+            self.define_scaling_window()
+        else:
+            self.spa_slice = spa_slice
+            self.spe_slice = spe_slice
+            self.raw_subframe = self.fullraw[self.spa_slice, self.spe_slice]
+            self.dark_subframe = self.fulldark[self.spa_slice, self.spe_slice]
 
+        # calculate current residual
+        currentsub = l1b.get_integration('dds_dn_s', raw_integration)
+        self.currentresidual = currentsub[self.spa_slice, self.spe_slice]
         # this container will keep all scaler objects.
         self.scalers = []
         self.p_dicts = {}
+        self.residual_mean = {}
+        self.residual_std = {}
         for Scaler in self.Scalers:
             if Scaler == MultScaler:
                 scaler = Scaler(self.dark_subframe,
@@ -249,13 +273,13 @@ class DarkFitter:
             scaler.do_fit()
             self.scalers.append(scaler)
             self.p_dicts.update(scaler.p_dict)
+            self.residual_mean.update(scaler.residual_mean_dict)
+            self.residual_std.update(scaler.residual_std_dict)
 
     def define_scaling_window(self):
-        spa_slice, spe_slice = self.l1b.find_scaling_window(self.fullraw)
-        self.raw_subframe = self.fullraw[spa_slice, spe_slice]
-        self.dark_subframe = self.fulldark[spa_slice, spe_slice]
-        self.spa_slice = spa_slice
-        self.spe_slice = spe_slice
+        self.spa_slice, self.spe_slice = self.l1b.find_scaling_window(self.fullraw)
+        self.raw_subframe = self.fullraw[self.spa_slice, self.spe_slice]
+        self.dark_subframe = self.fulldark[self.spa_slice, self.spe_slice]
 
     def get_title_data(self, data):
         subdata = data[self.spa_slice, self.spe_slice]

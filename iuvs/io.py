@@ -9,7 +9,6 @@ import numpy as np
 from scipy.ndimage.filters import generic_filter
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -360,7 +359,7 @@ class FitsFile:
                            aspect='auto',
                            **kwargs)
         else:
-            im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax,
+            im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax, aspect='auto',
                            **kwargs)
         ax.set_title(title)
         if set_extent:
@@ -635,15 +634,22 @@ class L1BReader(FitsFile):
 
         return fig
 
-    def plot_mean_raw_values(self):
+    def plot_mean_values(self, item):
         fig, ax = plt.subplots()
         fig.suptitle(self.plottitle)
-        ax.plot(self.raw_dn_s.mean(axis=(1, 2)))
+        ax.plot(getattr(self, item).mean(axis=(1, 2)))
         ax.set_xlabel("Integration number")
         ax.set_ylabel("DN / s")
-        ax.set_title("Mean raw DN/s over observation (i.e. L1B file)")
-        plt.savefig('/home/klay6683/plots/mean_raw_increase_over_obs.png',
-                    dpi=120)
+        ax.set_title("Mean {} over observation (i.e. L1B file)".format(item))
+        savename = os.path.join(str(plotfolder),
+                                self.plotfname + 'mean_{}.png'.format(item))
+        plt.savefig(savename, dpi=120)
+
+    def plot_mean_raw_values(self):
+        self.plot_mean_values('raw_dn_s')
+
+    def plot_mean_dds_values(self):
+        self.plot_mean_values('dds_dn_s')
 
     def plot_dark_spectrograms(self):
         fig, axes = plt.subplots(nrows=self.n_darks, sharex=True)
@@ -652,14 +658,20 @@ class L1BReader(FitsFile):
             self.plot_dark_spectrogram(integration=i, ax=ax)
             if i < self.n_darks-1:
                 ax.set_xlabel('')
+        savename = os.path.join(str(plotfolder), self.plotfname + '_dark_spectograms.png')
+        plt.savefig(savename, dpi=150)
 
-    def plot_dark_histograms(self):
+    def plot_dark_histograms(self, save=False):
         fig, ax = plt.subplots()
         for i, dark in enumerate(self.dark_dn_s):
             ax.hist(dark.ravel(), 100, log=True,
                     label="dark{}".format(i), alpha=0.5)
         plt.legend()
-        ax.set_title('Dark histograms')
+        fig.suptitle(self.plottitle)
+        ax.set_title('Dark histograms, DN / s')
+        if save:
+            savename = os.path.join(str(plotfolder), self.plotfname + '_dark_histograms.png')
+            plt.savefig(savename, dpi=150)
 
     def find_scaling_window(self, spec):
         self.spa_slice, self.spe_slice = find_scaling_window(spec)
