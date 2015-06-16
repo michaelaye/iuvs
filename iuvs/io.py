@@ -9,6 +9,7 @@ import numpy as np
 from scipy.ndimage.filters import generic_filter
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from .exceptions import DimensionsError
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -240,15 +241,12 @@ class FitsFile:
         self.hdulist = fits.open(fname)
 
     @property
-    def ndims(self):
+    def n_dims(self):
         return self.img_header['NAXIS']
 
     @property
     def n_integrations(self):
-        if self.ndims == 2:
-            return 1
-        else:
-            return self.img_header['NAXIS3']
+        return int(self.Engineering.get_value('NUMBER', 0))
 
     @property
     def scaling_factor(self):
@@ -502,6 +500,9 @@ class L1AReader(FitsFile):
                 setattr(self, name, pd.DataFrame(hdu.data).T)
             else:
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
+        # check for error case with binning table not found:
+        if self.n_dims == 2 and self.n_integrations > 1:
+            raise DimensionsError('n_dims == 2 with n_integrations > 1')
 
 
 class L1BReader(FitsFile):
