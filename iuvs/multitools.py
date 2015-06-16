@@ -12,6 +12,14 @@ def progress_display(results, objectlist, sleep=10):
         time.sleep(sleep)
 
 
+def nb_progress_display(results, objectlist, sleep=1):
+    prog = IntProgress(min=0, max=len(objectlist))
+    display(prog)
+    while not results.ready():
+        prog.value = results.progress
+        time.sleep(sleep)
+
+
 def int_progress(min, max):
     prog = IntProgress(min=min, max=max)
     display(prog)
