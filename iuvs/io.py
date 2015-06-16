@@ -120,8 +120,8 @@ def get_header_df(hdu, drop_comment=True):
     """
     hdu.verify('silentfix')
     header = hdu.header
-    df = pd.DataFrame(header.values(),
-                      index=header.keys())
+    df = pd.Series(header.values(),
+                   index=header.keys())
     return df.drop('COMMENT KERNEL'.split()) if drop_comment else df
 
 
