@@ -57,3 +57,6 @@ target/
 *.fits
 *.html
 *.zip
+*.sublime-workspace
+*.h5
+*.hdf
