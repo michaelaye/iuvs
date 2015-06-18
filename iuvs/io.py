@@ -246,7 +246,7 @@ class FitsFile:
 
     @property
     def n_integrations(self):
-        return int(self.Engineering.get_value('NUMBER', 0))
+        return int(self.Engineering.get_value(0, 'NUMBER'))
 
     @property
     def scaling_factor(self):
@@ -497,7 +497,7 @@ class L1AReader(FitsFile):
             name = hdu.header['EXTNAME']
             setattr(self, name+'_header', hdu.header)
             if name in self.works_with_dataframes:
-                setattr(self, name, pd.DataFrame(hdu.data).T)
+                setattr(self, name, pd.DataFrame(hdu.data))
             else:
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
         # check for error case with binning table not found:
@@ -530,7 +530,7 @@ class L1BReader(FitsFile):
             name = hdu.header['EXTNAME']
             setattr(self, name+'_header', hdu.header)
             if name in self.works_with_dataframes:
-                setattr(self, name, pd.DataFrame(hdu.data).T)
+                setattr(self, name, pd.DataFrame(hdu.data))
             else:
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
         self.darks_interpolated = self.background_dark
@@ -545,7 +545,10 @@ class L1BReader(FitsFile):
 
     @property
     def dark_times(self):
-        utcs = self.Dark_Integration['UTC']
+        try:
+            utcs = self.DarkIntegration['UTC']
+        except AttributeError:
+            utcs = self.Dark_Integration['UTC']
         times = []
         for utc in utcs:
             times.append(iuvs_utc_to_dtime(utc))
