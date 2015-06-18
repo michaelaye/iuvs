@@ -30,5 +30,6 @@ def make_crossfilter():
     # autompg['origin'] = autompg['origin'].astype(str)
     mydata['INT_TIME'] = mydata['INT_TIME'].astype(str)
     mydata['BINNING_SET'] = mydata['BINNING_SET'].astype(str)
+    mydata['DUTY_CYCLE'] = mydata['DUTY_CYCLE'].astype(str)
     app = CrossFilter.create(df=mydata)
     return app

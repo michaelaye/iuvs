@@ -29,7 +29,7 @@ productionlevel1bpath = production / 'level1b'
 
 mycmap = 'cubehelix'
 plotfolder = HOME / 'plots'
-
+outputfolder = HOME / 'output'
 
 def get_filenames(level, pattern=None, stage=True, ext='.fits.gz',
                   iterator=True):
