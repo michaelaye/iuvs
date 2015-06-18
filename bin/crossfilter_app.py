@@ -5,8 +5,22 @@ from bokeh.server.app import bokeh_app
 from bokeh.crossfilter.models import CrossFilter
 # from bokeh.sampledata.autompg import autompg
 import pandas as pd
+from iuvs import io
 
-mydata = pd.read_hdf('/Users/klay6683/data/iuvs/dark_stuff/to_study.h5', 'df')
+
+# Running
+# =======
+
+# To view this applet directly from a bokeh server, you simply need to
+# run a bokeh-server and point it at the stock example script:
+
+#     bokeh-server --script crossfilter_app.py
+
+# Now navigate to the following URL in a browser:
+
+#     http://localhost:5006/bokeh/crossfilter
+
+mydata = pd.read_hdf(str(io.outputfolder / 'to_study.h5'),'df')
 
 
 @bokeh_app.route("/bokeh/crossfilter/")
