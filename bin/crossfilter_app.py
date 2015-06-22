@@ -20,7 +20,7 @@ from iuvs import io
 
 #     http://localhost:5006/bokeh/crossfilter
 
-mydata = pd.read_hdf(str(io.outputfolder / 'to_study.h5'),'df')
+mydata = pd.read_hdf(str(io.outputfolder / 'to_study.h5'), 'df')
 
 
 @bokeh_app.route("/bokeh/crossfilter/")
@@ -28,8 +28,8 @@ mydata = pd.read_hdf(str(io.outputfolder / 'to_study.h5'),'df')
 def make_crossfilter():
     # autompg['cyl'] = autompg['cyl'].astype(str)
     # autompg['origin'] = autompg['origin'].astype(str)
-    mydata['INT_TIME'] = mydata['INT_TIME'].astype(str)
-    mydata['BINNING_SET'] = mydata['BINNING_SET'].astype(str)
-    mydata['DUTY_CYCLE'] = mydata['DUTY_CYCLE'].astype(str)
+    for col in ['INT_TIME', 'BINNING_SET', 'DUTY_CYCLE', 'MCP_VOLT',
+                'LYA_CENTROID']:
+        mydata[col] = mydata[col].astype(str)
     app = CrossFilter.create(df=mydata)
     return app
