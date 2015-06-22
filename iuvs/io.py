@@ -31,6 +31,7 @@ mycmap = 'cubehelix'
 plotfolder = HOME / 'plots'
 outputfolder = HOME / 'output'
 
+
 def get_filenames(level, pattern=None, stage=True, ext='.fits.gz',
                   iterator=True):
     if pattern is None:
@@ -258,6 +259,10 @@ class FitsFile:
         """
         bin_scale = self.img_header['SPA_SIZE'] * self.img_header['SPE_SIZE']
         return bin_scale * self.int_time
+
+    @property
+    def primary_img_dn_s(self):
+        return (self.img / self.scaling_factor) + 0.001
 
     @property
     def spatial_size(self):
@@ -729,7 +734,8 @@ def get_rectangle(spectogram):
     xy = spe_slice.start-0.5, spa_slice.start-0.5
     width = spe_slice.stop - spe_slice.start
     height = spa_slice.stop - spa_slice.start
-    return Rectangle(xy, width, height, fill=False)
+    return Rectangle(xy, width, height, fill=False, color='white',
+                     lw=2)
 
 
 def find_scaling_window(to_filter, size=None):
