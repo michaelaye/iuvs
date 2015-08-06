@@ -10,7 +10,7 @@ def get_version_string_from_fname(fname):
 
 
 def show_existing_versions(level, stage):
-    fnames = io.get_filenames(level, pattern=None, stage=stage, iterator=False)
+    fnames = io.get_filenames(level, pattern=None, env=stage, iterator=False)
     df = pd.DataFrame(fnames, columns=['fname'])
     df['version_string'] = df.fname.map(get_version_string_from_fname)
     print("Version  Counts")
@@ -21,11 +21,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("level", type=str, choices=['l1a', 'l1b'],
                         help='The level you want to check.')
-    parser.add_argument('location', type=str, choices=['stage', 'production'],
-                        help='Which stage you want to look at.')
+    parser.add_argument('env', type=str, choices=['stage', 'production'],
+                        help='Which environment you want to look at.')
     args = parser.parse_args()
-    if args.location == 'stage':
-        stage = True
-    else:
-        stage = False
-    show_existing_versions(args.level, stage)
+    show_existing_versions(args.level, args.env)

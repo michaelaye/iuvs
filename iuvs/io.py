@@ -27,30 +27,37 @@ else:
 
 stagelevel1apath = stage / 'level1a'
 stagelevel1bpath = stage / 'level1b'
+stagelevel0path = stage / 'level0'
 productionlevel1apath = production / 'level1a'
 productionlevel1bpath = production / 'level1b'
+productionlevel0path = production / 'level0'
+productionhkpath = production / 'housekeeping' / 'level1a'
 
 mycmap = 'cubehelix'
 plotfolder = HOME / 'plots'
 outputfolder = HOME / 'output'
 
 
-def get_filenames(level, pattern=None, stage=True, ext='.fits.gz',
+def get_hk_filenames():
+    return [str(i) for i in productionhkpath.glob('*')]
+
+
+def get_data_path(level, env='stage'):
+    levelstring = dict(l0='level0', l1a='level1a', l1b='level1b')
+    if env == 'stage':
+        return stage / levelstring[level]
+    elif env == 'production':
+        return production / levelstring[level]
+
+
+def get_filenames(level, pattern=None, env='stage', ext='.fits.gz',
                   iterator=True):
     if pattern is None:
         pattern = '*'
     else:
         pattern = '*' + pattern + '*'
-    if level == 'l1a':
-        if stage:
-            path = stagelevel1apath
-        else:
-            path = productionlevel1apath
-    else:
-        if stage:
-            path = stagelevel1bpath
-        else:
-            path = productionlevel1bpath
+    path = get_data_path(level, env)
+    print(path)
     if iterator:
         return iter([str(i) for i in path.glob(pattern + ext)])
     else:
@@ -85,6 +92,10 @@ def l1b_filenames(pattern=None, **kwargs):
              files like .txt
     """
     return get_filenames('l1b', pattern=pattern, **kwargs)
+
+
+def l0_filenames(pattern=None, **kwargs):
+    return get_filenames('l0', pattern=pattern, **kwargs)
 
 
 def l1a_darks(darktype=''):
@@ -225,12 +236,12 @@ class FitsBinTable:
 
 def iuvs_utc_to_dtime(utcstring):
     "Convert the IUVS UTC string to a dtime object."
-    cleaned = utcstring[:-3]+'0UTC'
+    cleaned = utcstring[:-3] + '0UTC'
     time = dt.datetime.strptime(cleaned, '%Y/%j %b %d %H:%M:%S.%f%Z')
     return time
 
 
-class FitsFile:
+class ScienceFitsFile:
 
     def __init__(self, fname):
         """Base class for L1A/B Reader.
@@ -329,13 +340,7 @@ class FitsFile:
             spec = data
         return spec
 
-    def plot_some_spectrogram(self, inspec, title, ax=None, cmap=None,
-                              cbar=True, log=False, showaxis=True,
-                              min_=None, max_=None, set_extent=None,
-                              draw_rectangle=True, vmin=None, vmax=None,
-                              **kwargs):
-        plot_hist = kwargs.pop('plot_hist', False)
-        savename = kwargs.pop('savename', False)
+    def set_spec_vmax_vmin(self, log, inspec, vmax, vmin):
         if log:
             spec = np.log10(inspec)
             vmax = 2.5 if vmax is None else vmax
@@ -344,9 +349,18 @@ class FitsFile:
             spec = inspec
             vmax = 10 if vmax is None else vmax
             vmin = 0 if vmin is None else vmin
+        return spec, vmax, vmin
+    
+    def plot_some_spectrogram(self, inspec, title, ax=None, cmap=None,
+                              cbar=True, log=False, showaxis=True,
+                              min_=None, max_=None, set_extent=None,
+                              draw_rectangle=True, vmin=None, vmax=None,
+                              **kwargs):
+        plot_hist = kwargs.pop('plot_hist', False)
+        savename = kwargs.pop('savename', False)
 
-        if cmap is None:
-            cmap = mycmap
+        spec, vmax, vmin = self.set_spec_vmax_vmin(log, inspec, vmax, vmin)
+        cmap = mycmap if cmap is None else cmap
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -356,17 +370,15 @@ class FitsFile:
         except IndexError:
             waves = self.wavelengths
         if set_extent:
-            im = ax.imshow(spec,
-                           cmap=cmap,
-                           extent=(waves[0], waves[-1],
-                                   len(spec), 0),
+            im = ax.imshow(spec, cmap=cmap,
+                           extent=(waves[0], waves[-1], len(spec), 0),
                            vmin=vmin,
                            vmax=vmax,
                            aspect='auto',
                            **kwargs)
         else:
-            im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax, aspect='auto',
-                           **kwargs)
+            im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax,
+                           aspect='auto', **kwargs)
         ax.set_title(title)
         if set_extent:
             ax.set_xlabel("Wavelength [nm]")
@@ -417,7 +429,7 @@ class FitsFile:
             spec = spec / self.scaling_factor
         if spatial is None:
             # if no spatial bin given, take the middle one
-            spatial = self.spatial_size//2
+            spatial = self.spatial_size // 2
 
         if title is None:
             if not spa_average:
@@ -481,14 +493,14 @@ class FitsFile:
         return image_stats(self.img)
 
 
-class L1AReader(FitsFile):
+class L1AReader(ScienceFitsFile):
 
     """For Level1a"""
 
     works_with_dataframes = [
         'Integration',
         'Engineering',
-        ]
+    ]
 
     def __init__(self, fname, stage=True):
 
@@ -503,17 +515,31 @@ class L1AReader(FitsFile):
         super().__init__(fname)
         for hdu in self.hdulist[1:]:
             name = hdu.header['EXTNAME']
-            setattr(self, name+'_header', hdu.header)
+            setattr(self, name + '_header', hdu.header)
             if name in self.works_with_dataframes:
                 setattr(self, name, pd.DataFrame(hdu.data))
             else:
-                setattr(self, hdu.header['EXTNAME'], hdu.data)
+                setattr(self, name, hdu.data)
         # check for error case with binning table not found:
         if self.n_dims == 2 and self.n_integrations > 1:
             raise DimensionsError('n_dims == 2 with n_integrations > 1')
 
 
-class L1BReader(FitsFile):
+class HKReader(object):
+    def __init__(self, fname):
+        self.hdulist = fits.open(fname)
+        for hdu in self.hdulist[1:]:
+            name = hdu.header['EXTNAME']
+            setattr(self, name + '_header', hdu.header)
+            setattr(self, name, hdu.data)
+
+    def calc_utc_from_table(self, table):
+        coarse = table['SC_CLK_COARSE']
+        fine = table['SC_CLK_FINE']
+        timestamp = coarse + float(fine) / 65536
+        
+
+class L1BReader(ScienceFitsFile):
 
     """For Level1B"""
 
@@ -536,7 +562,7 @@ class L1BReader(FitsFile):
         super().__init__(fname)
         for hdu in self.hdulist[1:]:
             name = hdu.header['EXTNAME']
-            setattr(self, name+'_header', hdu.header)
+            setattr(self, name + '_header', hdu.header)
             if name in self.works_with_dataframes:
                 setattr(self, name, pd.DataFrame(hdu.data))
             else:
@@ -580,7 +606,7 @@ class L1BReader(FitsFile):
             dds = self.detector_dark_subtracted
         except AttributeError:
             dds = self.detector_background_subtracted
-        return (dds / self.scaling_factor)+0.001
+        return (dds / self.scaling_factor) + 0.001
 
     def plot_raw_spectrogram(self, integration=None, ax=None,
                              cmap=None, cbar=True, log=False,
@@ -668,7 +694,7 @@ class L1BReader(FitsFile):
         fig.suptitle(self.plottitle)
         for i, ax in zip(range(self.n_darks), axes):
             self.plot_dark_spectrogram(integration=i, ax=ax)
-            if i < self.n_darks-1:
+            if i < self.n_darks - 1:
                 ax.set_xlabel('')
         savename = os.path.join(str(plotfolder), self.plotfname + '_dark_spectograms.png')
         plt.savefig(savename, dpi=150)
@@ -734,7 +760,7 @@ class L1BReader(FitsFile):
 
 def get_rectangle(spectogram):
     spa_slice, spe_slice = find_scaling_window(spectogram)
-    xy = spe_slice.start-0.5, spa_slice.start-0.5
+    xy = spe_slice.start - 0.5, spa_slice.start - 0.5
     width = spe_slice.stop - spe_slice.start
     height = spa_slice.stop - spa_slice.start
     return Rectangle(xy, width, height, fill=False, color='white',
@@ -743,20 +769,20 @@ def get_rectangle(spectogram):
 
 def find_scaling_window(to_filter, size=None):
     if size is None:
-        x = max(to_filter.shape[0]//5, 2)
-        y = max(to_filter.shape[1]//10, 1)
+        x = max(to_filter.shape[0] // 5, 2)
+        y = max(to_filter.shape[1] // 10, 1)
         size = (x, y)
     filtered = generic_filter(to_filter, np.median, size=size,
-                              mode='constant', cval=to_filter.max()*100)
+                              mode='constant', cval=to_filter.max() * 100)
     min_spa, min_spe = np.unravel_index(filtered.argmin(), to_filter.shape)
-    spa1 = min_spa - size[0]//2
+    spa1 = min_spa - size[0] // 2
     if spa1 < 0:
         spa1 = 0
     spa2 = spa1 + size[0]
     if spa2 > to_filter.shape[0]:
         spa1 = to_filter.shape[0] - size[0]
         spa2 = to_filter.shape[0]
-    spe1 = min_spe - size[1]//2
+    spe1 = min_spe - size[1] // 2
     if spe1 < 0:
         spe1 = 0
     spe2 = spe1 + size[1]
@@ -770,19 +796,19 @@ def find_scaling_window(to_filter, size=None):
 
 def check_scaling_window_finder(l1b, integration):
     to_filter = l1b.get_integration('raw_dn_s', integration)
-    x = max(to_filter.shape[0]//10, 1)
-    y = max(to_filter.shape[1]//10, 1)
+    x = max(to_filter.shape[0] // 10, 1)
+    y = max(to_filter.shape[1] // 10, 1)
     size = (x, y)
     print("Img shape:", to_filter.shape)
     print("Kernel size:", size)
 
     filtered = generic_filter(to_filter, np.std, size=size,
-                              mode='constant', cval=to_filter.max()*100)
+                              mode='constant', cval=to_filter.max() * 100)
     min_spa, min_spe = np.unravel_index(filtered.argmin(), to_filter.shape)
     print("Minimum:", filtered.min())
     print("Minimum coords", min_spa, min_spe)
 
-    spa1 = min_spa - size[0]//2
+    spa1 = min_spa - size[0] // 2
     if spa1 < 0:
         spa1 = 0
     spa2 = spa1 + size[0]
@@ -791,7 +817,7 @@ def check_scaling_window_finder(l1b, integration):
         spa2 = to_filter.shape[0]
     print("Spatial:", spa1, spa2)
 
-    spe1 = min_spe - size[1]//2
+    spe1 = min_spe - size[1] // 2
     if spe1 < 0:
         spe1 = 0
     spe2 = spe1 + size[1]
