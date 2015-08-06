@@ -1,13 +1,13 @@
 from setuptools import setup, find_packages
 
-pandas_version = '0.16.0'
+pandas_version = '0.16.1'
 
 setup(
     name="IUVS",
-    version="0.3",
+    version="0.3.1",
     packages=find_packages(),
 
-    install_requires=['astropy', 'pandas>='+pandas_version],
+    install_requires=['astropy', 'pandas>=' + pandas_version],
 
     scripts=['bin/show_versions'],
 
