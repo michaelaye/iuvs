@@ -1,14 +1,17 @@
 import datetime as dt
-from astropy.io import fits
-import matplotlib.pyplot as plt
-import pandas as pd
 import os
-from pathlib import Path
 import socket
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
-from scipy.ndimage.filters import generic_filter
+import pandas as pd
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from scipy.ndimage.filters import generic_filter
+
+from astropy.io import fits
+
 from .exceptions import DimensionsError
 
 host = socket.gethostname()
