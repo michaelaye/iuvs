@@ -525,20 +525,6 @@ class L1AReader(ScienceFitsFile):
             raise DimensionsError('n_dims == 2 with n_integrations > 1')
 
 
-class HKReader(object):
-    def __init__(self, fname):
-        self.hdulist = fits.open(fname)
-        for hdu in self.hdulist[1:]:
-            name = hdu.header['EXTNAME']
-            setattr(self, name + '_header', hdu.header)
-            setattr(self, name, hdu.data)
-
-    def calc_utc_from_table(self, table):
-        coarse = table['SC_CLK_COARSE']
-        fine = table['SC_CLK_FINE']
-        timestamp = coarse + float(fine) / 65536
-        
-
 class L1BReader(ScienceFitsFile):
 
     """For Level1B"""
