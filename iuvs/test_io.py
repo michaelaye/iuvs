@@ -1,17 +1,22 @@
-import socket
-from . import io
 import os.path as osp
+import socket
+from pathlib import Path
+
+from iuvs import io
 
 host = socket.gethostname()
+
 
 def test_get_data_path():
 
     if host.startswith('maven-iuvs-itf'):
-        for level in ['level0', 'level1a', 'level1b']:
-            for env in ['stage','production']:
-                root = '/maven_iuvs/stage/products'
-                expected = osp.join(root, env, level)
-            assert io.get_data_path(level, env) == expected
+        for key, level in zip(['l0', 'l1a', 'l1b'],
+                              ['level0', 'level1a', 'level1b']):
+            for env in ['stage', 'production']:
+                root = '/maven_iuvs/' + env + '/products'
+                expected = osp.join(root, level)
+            assert io.get_data_path(key, env) == Path(expected)
+
 
 def test_iuvs_utc_to_dtime():
     from .io import iuvs_utc_to_dtime
@@ -26,6 +31,6 @@ class TestFitsFile:
 
     "Collector for test for the FitsFile class."
 
-    def test_init():
+    def test_init(self):
         "init claims it needs an absolute path as input. test this here"
         pass
