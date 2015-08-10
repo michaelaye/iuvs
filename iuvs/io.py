@@ -400,9 +400,14 @@ class ScienceFitsFile(object):
 
         return ax
 
-    def do_labels(self, ax, title=title, set_extent=set_extent):
+    def do_labels(self, ax, title='', set_extent=None):
         ax.set_title(title)
-        xlabel = 'Wavelength [nm]' if set_extent else 'Spectral bins'
+        if set_extent is True:
+            xlabel = 'Wavelength [nm]'
+        elif set_extent is False:
+            xlabel = 'Spectral bins'
+        else:
+            xlabel = 'set_extent not specified in do_labels'
         ax.set_xlabel(xlabel)
         ax.set_ylabel('Spatial pixels')
 
