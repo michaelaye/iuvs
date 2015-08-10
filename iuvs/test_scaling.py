@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from . import scaling
+from iuvs import scaling
 
 xfail = pytest.mark.xfail
 
