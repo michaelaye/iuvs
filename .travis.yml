@@ -20,13 +20,12 @@ install:
   - pip install pathlib
   - pip install pytest-cov
   - pip install coveralls
-  - pip install .
+  - python setup.py install
 
-cache: false
-  # pip: true
-  # directories:
-  #   - $HOME/miniconda
-
+cache:
+  directories:
+    - $HOME/.cache/pip
+     
 # command to run tests, e.g. python setup.py test
 script:
   - py.test
