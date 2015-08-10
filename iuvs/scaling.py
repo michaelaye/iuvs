@@ -1,8 +1,6 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from builtins import super
-
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
@@ -135,7 +133,7 @@ class PolyScaler(DarkScaler):
     """Manage polynomial fits. Default rank is 2."""
 
     def __init__(self, data_in, data_out, rank=2):
-        super().__init__(data_in, data_out)
+        super(PolyScaler, self).__init__(data_in, data_out)
         self.rank = rank
         self.name = 'Poly'+str(self.rank)
 
@@ -180,19 +178,19 @@ class PolyScaler(DarkScaler):
 class PolyScaler1(PolyScaler):
 
     def __init__(self, *args):
-        super().__init__(*args, rank=1)
+        super(PolyScaler1, self).__init__(*args, rank=1)
 
 
 class PolyScaler2(PolyScaler):
 
     def __init__(self, *args):
-        super().__init__(*args, rank=2)
+        super(PolyScaler2, self).__init__(*args, rank=2)
 
 
 class PolyScaler3(PolyScaler):
 
     def __init__(self, *args):
-        super().__init__(*args, rank=3)
+        super(PolyScaler3, self).__init__(*args, rank=3)
 
 
 class PolyScalerManager(object):
@@ -457,7 +455,7 @@ class KindHeader(fits.Header):
     """FITS header with the 'kind' card."""
 
     def __init__(self, kind='original dark'):
-        super().__init__()
+        super(KindHeader, self).__init__()
         self.set('kind', kind, comment='The kind of image')
 
 
@@ -466,7 +464,7 @@ class PrimHeader(KindHeader):
     """FITS primary header with a name card."""
 
     def __init__(self):
-        super().__init__()
+        super(PrimHeader, self).__init__()
         self.set('name', 'dark1')
 
 
@@ -475,7 +473,7 @@ class FittedHeader(KindHeader):
     """FITS header with a kind and a rank card."""
 
     def __init__(self, rank):
-        super().__init__('fitted dark')
+        super(FittedHeader, self).__init__('fitted dark')
         comment = "The degree of polynom used for the scaling."
         self.set('rank', rank, comment=comment)
         self.add_comment("The rank is '-1' for 'Additive' fitting, '0' is "

@@ -153,7 +153,7 @@ def save_to_hdf(df, fname, output_subdir=None):
     return str(path)
 
 
-class Filename:
+class Filename(object):
 
     def __init__(self, fname):
         try:
@@ -216,7 +216,7 @@ class Filename:
         return self.__repr__()
 
 
-class FitsBinTable:
+class FitsBinTable(object):
 
     """Convert a binary Fits table to a pandas table.
 
@@ -238,7 +238,7 @@ def iuvs_utc_to_dtime(utcstring):
     return time
 
 
-class ScienceFitsFile:
+class ScienceFitsFile(object):
 
     def __init__(self, fname):
         """Base class for L1A/B Reader.
@@ -517,7 +517,7 @@ class L1AReader(ScienceFitsFile):
                 fname = str(productionlevel1apath / fname)
 
         # call super init
-        super().__init__(fname)
+        super(L1AReader, self).__init__(fname)
         for hdu in self.hdulist[1:]:
             name = hdu.header['EXTNAME']
             setattr(self, name + '_header', hdu.header)
@@ -550,7 +550,7 @@ class L1BReader(ScienceFitsFile):
                 fname = str(productionlevel1bpath / fname)
 
         # call super init
-        super().__init__(fname)
+        super(L1BReader, self).__init__(fname)
         for hdu in self.hdulist[1:]:
             name = hdu.header['EXTNAME']
             setattr(self, name + '_header', hdu.header)
