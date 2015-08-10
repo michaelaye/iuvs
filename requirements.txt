@@ -2,4 +2,3 @@ pandas
 pathlib
 numpy
 scipy
-SpiceyPy
