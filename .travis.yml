@@ -6,7 +6,6 @@ branches:
     - gh-pages
 
 python:
-  - "2.7"
   - "3.4"
 
 before_install:
@@ -14,13 +13,14 @@ before_install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda update --yes conda
+
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
-  - pip install pathlib
+  - conda update --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
   - pip install .
-cache:
+
+cache: pip
   directories:
-    - miniconda
+    - $HOME/miniconda
 
 # command to run tests, e.g. python setup.py test
 script:
