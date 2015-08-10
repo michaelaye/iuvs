@@ -1,3 +1,8 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
+from builtins import super
+
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
