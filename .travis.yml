@@ -15,7 +15,7 @@ before_install:
   - conda update --yes conda
 
 install:
-  - conda update --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
   - pip install .
 
 cache: false
