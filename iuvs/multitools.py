@@ -1,7 +1,8 @@
-import time
 import sys
-from IPython.html.widgets import FloatProgress, IntProgress
+import time
+
 from IPython.display import display
+from IPython.html.widgets import FloatProgress, IntProgress
 from numpy import linspace
 
 
@@ -20,17 +21,17 @@ def nb_progress_display(results, objectlist, sleep=1):
         time.sleep(sleep)
 
 
-def int_progress(min, max):
-    prog = IntProgress(min=min, max=max)
+def int_progress(min_, max_):
+    prog = IntProgress(min=min_, max=max_)
     display(prog)
-    for i in linspace(min, max, 25):
+    for i in linspace(min_, max_, 25):
         time.sleep(0.1)
         prog.value = i
 
 
-def float_progress(min, max):
-    prog = FloatProgress(min=min, max=max)
+def float_progress(min_, max_):
+    prog = FloatProgress(min=min_, max=max_)
     display(prog)
-    for i in linspace(min, max, 100):
+    for i in linspace(min_, max_, 100):
         time.sleep(0.1)
         prog.value = i
