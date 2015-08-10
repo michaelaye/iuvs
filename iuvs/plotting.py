@@ -1,10 +1,12 @@
 """some plotting utilities for IUVS"""
-import matplotlib.pyplot as plt
-import numpy as np
 import os
-from numpy import ceil
-import seaborn as sns
+import sys
 
+import matplotlib.pyplot as plt
+import moviepy.editor as mpy
+import numpy as np
+import pandas as pd
+import seaborn as sns
 # try:
 #     from plotly.graph_objs import Heatmap, Scatter, Histogram, Data,\
 #         Annotation, Annotations, Font, Marker
@@ -12,11 +14,10 @@ import seaborn as sns
 # except ImportError:
 #     print("Can't import plotly")
 from moviepy.video.io.bindings import mplfig_to_npimage
-import moviepy.editor as mpy
-from .scaling import poly_fitting
+from numpy import ceil
+
 from . import io
-import sys
-import pandas as pd
+from .scaling import poly_fitting
 
 
 def calc_4_to_3(width):
@@ -74,7 +75,6 @@ def raw_violins(l1b):
     df = pd.DataFrame(l1b.raw_dn_s.reshape(l1b.n_integrations, -1)).T
     plt.figure()
     sns.violinplot(data=df)
-
 
 
 # def make_plotly_multiplot(img, spatial=None, spectral=None, title='No title',
@@ -143,7 +143,7 @@ def raw_violins(l1b):
 class L1BImageOperator(object):
     """Execute string based operations on contained images"""
     def __init__(self, l1b):
-        super().__init__()
+        super(L1BImageOperator, self).__init__()
         self.l1b = l1b
         cube = self.l1b.detector_raw
         self.dark1 = self.l1b.detector_dark[1]
