@@ -25,10 +25,10 @@ install:
 cache:
   directories:
     - $HOME/.cache/pip
-     
+
 # command to run tests, e.g. python setup.py test
 script:
-  - py.test
+  - py.test --cov .
 
 after_success:
   - coveralls

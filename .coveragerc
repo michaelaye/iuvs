@@ -11,3 +11,6 @@ omit =
 exclude_lines =
     def __repr__
     if __name__ == .__main__.:
+
+[html]
+directory = coverage_html_report
