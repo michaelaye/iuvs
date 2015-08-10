@@ -2,4 +2,4 @@ strictness: medium
 max-line-length: 99
 ignore-patterns:
     - ^build
-    - */__init__.py
+    - __init__.py
