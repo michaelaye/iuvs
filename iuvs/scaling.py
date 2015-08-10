@@ -1,8 +1,9 @@
-from scipy.optimize import curve_fit
-import numpy as np
 import matplotlib.pyplot as plt
-from . import io
+import numpy as np
 from astropy.io import fits
+from scipy.optimize import curve_fit
+
+from . import io
 
 
 def get_corner(data, corner, size):
@@ -32,7 +33,7 @@ def get_lr(data, size=10):
     return get_corner(data, 'lr', size)
 
 
-class DarkScaler:
+class DarkScaler(object):
 
     """Managing the general attributes for scaling darks around.
 
@@ -189,7 +190,7 @@ class PolyScaler3(PolyScaler):
         super().__init__(*args, rank=3)
 
 
-class PolyScalerManager:
+class PolyScalerManager(object):
 
     def __init__(self, data_in, data_out, rankstart, rankend):
         self.rankstart = rankstart
@@ -222,7 +223,7 @@ class PolyScalerManager:
         plt.ylabel('Mean value of fracional residual')
 
 
-class DarkFitter:
+class DarkFitter(object):
     Scalers = [AddScaler, MultScaler, PolyScaler1,
                PolyScaler2]
 
@@ -478,7 +479,7 @@ class FittedHeader(KindHeader):
                          "equivalent to the degree of the polynomial fit.")
 
 
-class DarkWriter:
+class DarkWriter(object):
 
     """Manages the creation of FITS file for dark analysis results.
     """
