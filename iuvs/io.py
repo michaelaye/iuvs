@@ -400,7 +400,7 @@ class ScienceFitsFile(object):
 
         return ax
 
-    def do_labels(self, ax, title, set_extent):
+    def do_labels(self, ax, title=title, set_extent=set_extent):
         ax.set_title(title)
         xlabel = 'Wavelength [nm]' if set_extent else 'Spectral bins'
         ax.set_xlabel(xlabel)
