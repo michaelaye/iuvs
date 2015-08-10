@@ -1,7 +1,10 @@
+import sys
+
 import numpy as np
+import pandas as pd
 from astropy.io import fits
 
-import SpiceyPy as spice
+import SpicepyPy as spice
 
 from .spice import load_kernels
 
@@ -21,7 +24,8 @@ def calc_utc_from_sclk(coarse, fine):
     sclkch = np.vectorize(format_times)(sec, subsec)
     sclkdp = np.vectorize(spice.scencd)(mavenid, sclkch)
     et = np.vectorize(spice.sct2e)(mavenid, sclkdp)
-    return np.vectorize(spice.et2utc)(et, 'ISOC', 50, 100)
+    utc = np.vectorize(spice.et2utc)(et, 'ISOC', 50, 100)
+    return pd.to_datetime(utc)
 
 
 class HKReader(object):
@@ -35,6 +39,19 @@ class HKReader(object):
         temp_cols = [value for value in self.AnalogConv_header.values()
                      if 'temp' in str(value).lower()]
         self.temp_cols = temp_cols
+        self.get_temp_table()
 
-    def calc_utc_from_table(self, table):
-        utc = calc_utc_from_sclk(table['SC_CLK_COARSE'], table['SC_CLK_FINE'])
+    def get_temp_table(self):
+        table = self.AnalogConv  # this table is set during init.
+        utc = calc_utc_from_sclk(table['SC_CLK_COARSE'],
+                                 table['SC_CLK_FINE'])
+
+        d = {}
+        for col in self.temp_cols:
+            data = self.AnalogConv[col]
+            sys_byteorder = ('>', '<')[sys.byteorder == 'little']
+            if data.dtype.byteorder not in ('=', sys_byteorder):
+                d[col] = data.byteswap().newbyteorder(sys_byteorder)
+            else:
+                d[col] = data
+        self.temp_df = pd.DataFrame(d, index=utc)
