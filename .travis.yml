@@ -17,6 +17,7 @@ before_install:
 
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
+  - pip install pathlib
   - pip install .
 
 cache: false
