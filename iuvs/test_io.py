@@ -27,6 +27,10 @@ def test_iuvs_utc_to_dtime():
     assert expected == iuvs_utc_to_dtime(s)
 
 
+def test_get_hk_filenames(monkeypatch):
+    pass
+
+
 class TestFitsFile:
 
     "Collector for test for the FitsFile class."

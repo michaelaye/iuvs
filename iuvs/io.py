@@ -6,11 +6,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from astropy.io import fits
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from scipy.ndimage.filters import generic_filter
-
-from astropy.io import fits
 
 from .exceptions import DimensionsError
 
@@ -58,10 +57,8 @@ def get_filenames(level, pattern=None, env='stage', ext='.fits.gz',
         pattern = '*' + pattern + '*'
     path = get_data_path(level, env)
     print(path)
-    if iterator:
-        return iter([str(i) for i in path.glob(pattern + ext)])
-    else:
-        return [str(i) for i in list(path.glob(pattern + ext))]
+    result = map(str, path.glob(pattern + ext))
+    return result if iterator else list(result)
 
 
 def l1a_filenames(pattern=None, **kwargs):
@@ -99,7 +96,7 @@ def l0_filenames(pattern=None, **kwargs):
 
 
 def l1a_darks(darktype=''):
-    searchpattern = '*' + darktype + 'dark*.fits.gz'
+    searchpattern = darktype + 'dark*.fits.gz'
     print("Searching for", searchpattern)
     return l1a_filenames(searchpattern)
 
@@ -120,7 +117,7 @@ def get_l1a_filename_stats():
             continue
     s = pd.Series(iuvs_fnames)
     df = pd.DataFrame()
-    for item in 'phase cycle mode channel time level version revision'.split():
+    for item in 'phase cycle_orbit mode channel time level version revision'.split():
         df[item] = s.map(lambda x: getattr(x, item))
     df['channel'] = df.channel.astype('category')
     df.set_index('time', inplace=True)
@@ -350,7 +347,7 @@ class ScienceFitsFile:
             vmax = 10 if vmax is None else vmax
             vmin = 0 if vmin is None else vmin
         return spec, vmax, vmin
-    
+
     def plot_some_spectrogram(self, inspec, title, ax=None, cmap=None,
                               cbar=True, log=False, showaxis=True,
                               min_=None, max_=None, set_extent=None,
@@ -379,23 +376,13 @@ class ScienceFitsFile:
         else:
             im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax,
                            aspect='auto', **kwargs)
-        ax.set_title(title)
-        if set_extent:
-            ax.set_xlabel("Wavelength [nm]")
-        else:
-            ax.set_xlabel("Spectral bins")
-        ax.set_ylabel('Spatial pixels')
+
+        self.do_labels(self, ax, title, set_extent)
+
         if not showaxis:
             ax.grid('off')
         if cbar:
-            cb = plt.colorbar(im, ax=ax)
-            if log:
-                label = 'log(DN/s)'
-            else:
-                label = 'DN/s'
-            cb.set_label(label, fontsize=14, rotation=0)
-        self.current_ax = ax
-        self.current_spec = spec
+            self.plot_colorbar(im, ax, log)
 
         # rectangle
         if draw_rectangle:
@@ -403,16 +390,34 @@ class ScienceFitsFile:
 
         # inset histogram
         if plot_hist:
-            in_axes = inset_axes(ax, width="20%", height="20%",
-                                 loc=2)
-            in_axes.hist(spec.ravel(), bins=20, normed=True)
-            plt.setp(in_axes.get_xticklabels(), visible=False)
-            plt.setp(in_axes.get_yticklabels(), visible=False)
-            in_axes.grid('off')
+            self.plot_hist(ax, spec)
 
         if savename:
             ax.get_figure().savefig(savename, dpi=100)
+
+        self.current_ax = ax
+        self.current_spec = spec
+
         return ax
+
+    def do_labels(self, ax, title, set_extent):
+        ax.set_title(title)
+        xlabel = 'Wavelength [nm]' if set_extent else 'Spectral bins'
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel('Spatial pixels')
+
+    def plot_colorbar(self, im, ax, log):
+        cb = plt.colorbar(im, ax=ax)
+        label = 'log(DN/s)' if log else 'DN/s'
+        cb.set_label(label, fontsize=14, rotation=0)
+
+    def plot_hist(self, ax, spec):
+        in_axes = inset_axes(ax, width="20%", height="20%",
+                             loc=2)
+        in_axes.hist(spec.ravel(), bins=20, normed=True)
+        plt.setp(in_axes.get_xticklabels(), visible=False)
+        plt.setp(in_axes.get_yticklabels(), visible=False)
+        in_axes.grid('off')
 
     def plot_some_profile(self, data_attr, integration,
                           spatial=None, ax=None, scale=False,
