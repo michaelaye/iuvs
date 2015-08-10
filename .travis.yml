@@ -18,6 +18,8 @@ before_install:
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
   - pip install pathlib
+  - pip install pytest-cov
+  - pip install coveralls
   - pip install .
 
 cache: false
@@ -28,3 +30,8 @@ cache: false
 # command to run tests, e.g. python setup.py test
 script:
   - py.test
+
+after_success:
+  - if [[ $ENV == python=3.4* ]]; then
+        coveralls;
+    fi
