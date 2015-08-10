@@ -377,7 +377,7 @@ class ScienceFitsFile(object):
             im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax,
                            aspect='auto', **kwargs)
 
-        self.do_labels(self, ax, title, set_extent)
+        self.do_labels(self, ax, title=title, set_extent=set_extent)
 
         if not showaxis:
             ax.grid('off')
