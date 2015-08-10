@@ -23,7 +23,7 @@ setup(
     author="K.-Michael Aye",
     author_email="michael.aye@lasp.colorado.edu",
     description="Software for handling MAVEN IUVS data",
-    license="BSD 2-clause",
+    license="ISC",
     keywords="MAVEN IUVS",
     url="http://lasp.colorado.edu",
 )

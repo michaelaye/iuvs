@@ -1,3 +1,7 @@
+pip
+numpy
+scipy
+pytest
 pandas
 astropy
 matplotlib
