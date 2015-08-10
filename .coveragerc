@@ -4,8 +4,7 @@
 branch = True
 source = iuvs
 include = */iuvs/*
-omit =
-    */setup.py
+omit = */idl/*
 
 [report]
 exclude_lines =
