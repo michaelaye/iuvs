@@ -18,10 +18,10 @@ install:
   - conda update --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
   - pip install .
 
-cache:
-  pip: true
-  directories:
-    - $HOME/miniconda
+cache: false
+  # pip: true
+  # directories:
+  #   - $HOME/miniconda
 
 # command to run tests, e.g. python setup.py test
 script:
