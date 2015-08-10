@@ -4,10 +4,12 @@ pandas_version = '0.16.1'
 
 setup(
     name="IUVS",
-    version="0.3.2",
+    version="0.3.3",
     packages=find_packages(),
 
-    install_requires=['astropy', 'pandas>=' + pandas_version],
+    install_requires=['astropy',
+                      'pandas>=' + pandas_version,
+                      'matplotlib'],
 
     scripts=['bin/show_versions'],
 
