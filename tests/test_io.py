@@ -1,8 +1,10 @@
+import datetime as dt
 import os.path as osp
 import socket
 from pathlib import Path
 
 from iuvs import io
+from iuvs.io import iuvs_utc_to_dtime
 
 host = socket.gethostname()
 
@@ -19,8 +21,6 @@ def test_get_data_path():
 
 
 def test_iuvs_utc_to_dtime():
-    from .io import iuvs_utc_to_dtime
-    import datetime as dt
     s = '2015/085 Mar 26 17:45:19.96275UTC'
     expected = dt.datetime.strptime("2015-03-26 17:45:19.962750",
                                     '%Y-%m-%d %H:%M:%S.%f')
