@@ -36,7 +36,7 @@ class HKReader(object):
             setattr(self, name + '_header', hdu.header)
             setattr(self, name, hdu.data)
 
-        temp_cols = [value for value in self.AnalogConv_header.values()
+        temp_cols = [value for value in getattr(self, 'AnalogConv_header').values()
                      if 'temp' in str(value).lower()]
         self.temp_cols = temp_cols
         self.get_temp_table()
