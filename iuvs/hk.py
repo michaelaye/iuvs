@@ -42,13 +42,13 @@ class HKReader(object):
         self.get_temp_table()
 
     def get_temp_table(self):
-        table = self.AnalogConv  # this table is set during init.
+        table = getattr(self, 'AnalogConv')  # this table is set during init.
         utc = calc_utc_from_sclk(table['SC_CLK_COARSE'],
                                  table['SC_CLK_FINE'])
 
         d = {}
         for col in self.temp_cols:
-            data = self.AnalogConv[col]
+            data = table[col]
             sys_byteorder = ('>', '<')[sys.byteorder == 'little']
             if data.dtype.byteorder not in ('=', sys_byteorder):
                 d[col] = data.byteswap().newbyteorder(sys_byteorder)

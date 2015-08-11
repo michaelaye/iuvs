@@ -258,7 +258,7 @@ class ScienceFitsFile(object):
 
     @property
     def n_integrations(self):
-        return int(self.Engineering.get_value(0, 'NUMBER'))
+        return int(getattr(self, 'Engineering').get_value(0, 'NUMBER'))
 
     @property
     def scaling_factor(self):
@@ -289,7 +289,7 @@ class ScienceFitsFile(object):
 
     @property
     def wavelengths(self):
-        return self.Observation['WAVELENGTH'][0]
+        return getattr(self, 'Observation')['WAVELENGTH'][0]
 
     @property
     def img_header(self):
@@ -320,9 +320,14 @@ class ScienceFitsFile(object):
         return iuvs_utc_to_dtime(string)
 
     @property
+    def n_darks(self):
+        "To be overwritten by daughter class!"
+        return None
+
+    @property
     def integration_times(self):
         "Convert times from Integration table to pandas TimeSeries"
-        return self.Integration.loc['UTC'].map(iuvs_utc_to_dtime)
+        return getattr(self, 'Integration').loc['UTC'].map(iuvs_utc_to_dtime)
 
     def get_integration(self, data_attr, integration):
         data = getattr(self, data_attr)
@@ -563,22 +568,22 @@ class L1BReader(ScienceFitsFile):
                 setattr(self, name, pd.DataFrame(hdu.data))
             else:
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
-        self.darks_interpolated = self.background_dark
+        self.darks_interpolated = getattr(self, 'background_dark')
 
     @property
     def dark_det_temps(self):
-        return self.Dark_Integration['DET_TEMP_C']
+        return getattr(self, 'Dark_Integration')['DET_TEMP_C']
 
     @property
     def dark_case_temps(self):
-        return self.Dark_Integration['CASE_TEMP_C']
+        return getattr(self, 'Dark_Integration')['CASE_TEMP_C']
 
     @property
     def dark_times(self):
         try:
-            utcs = self.DarkIntegration['UTC']
+            utcs = getattr(self, 'DarkIntegration')['UTC']
         except AttributeError:
-            utcs = self.Dark_Integration['UTC']
+            utcs = getattr(self, 'Dark_Integration')['UTC']
         times = []
         for utc in utcs:
             times.append(iuvs_utc_to_dtime(utc))
@@ -586,22 +591,22 @@ class L1BReader(ScienceFitsFile):
 
     @property
     def n_darks(self):
-        return self.detector_dark.shape[0]
+        return getattr(self, 'detector_dark').shape[0]
 
     @property
     def raw_dn_s(self):
-        return (self.detector_raw / self.scaling_factor) + 0.001
+        return (getattr(self, 'detector_raw') / self.scaling_factor) + 0.001
 
     @property
     def dark_dn_s(self):
-        return (self.detector_dark / self.scaling_factor) + 0.001
+        return (getattr(self, 'detector_dark') / self.scaling_factor) + 0.001
 
     @property
     def dds_dn_s(self):
         try:
-            dds = self.detector_dark_subtracted
+            dds = getattr(self, 'detector_dark_subtracted')
         except AttributeError:
-            dds = self.detector_background_subtracted
+            dds = getattr(self, 'detector_background_subtracted')
         return (dds / self.scaling_factor) + 0.001
 
     def plot_raw_spectrogram(self, integration=None, ax=None,
