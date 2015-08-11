@@ -238,6 +238,45 @@ def iuvs_utc_to_dtime(utcstring):
     return time
 
 
+def set_spec_vmax_vmin(log, inspec, vmax, vmin):
+    if log:
+        spec = np.log10(inspec)
+        vmax = 2.5 if vmax is None else vmax
+        vmin = -3.0 if vmin is None else vmin
+    else:
+        spec = inspec
+        vmax = 10 if vmax is None else vmax
+        vmin = 0 if vmin is None else vmin
+    return spec, vmax, vmin
+
+
+def do_labels(ax, title='', set_extent=None):
+    ax.set_title(title)
+    if set_extent is True:
+        xlabel = 'Wavelength [nm]'
+    elif set_extent is False:
+        xlabel = 'Spectral bins'
+    else:
+        xlabel = 'set_extent not specified in do_labels'
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel('Spatial pixels')
+
+
+def plot_colorbar(im, ax, log):
+    cb = plt.colorbar(im, ax=ax)
+    label = 'log(DN/s)' if log else 'DN/s'
+    cb.set_label(label, fontsize=14, rotation=0)
+
+
+def plot_hist(ax, spec):
+    in_axes = inset_axes(ax, width="20%", height="20%",
+                         loc=2)
+    in_axes.hist(spec.ravel(), bins=20, normed=True)
+    plt.setp(in_axes.get_xticklabels(), visible=False)
+    plt.setp(in_axes.get_yticklabels(), visible=False)
+    in_axes.grid('off')
+
+
 class ScienceFitsFile(object):
 
     def __init__(self, fname):
@@ -324,6 +363,7 @@ class ScienceFitsFile(object):
     def n_darks(self):
         "To be overwritten by daughter class!"
         return None
+    # pylint: enable=no-self-use
 
     @property
     def integration_times(self):
@@ -343,17 +383,6 @@ class ScienceFitsFile(object):
             spec = data
         return spec
 
-    def set_spec_vmax_vmin(self, log, inspec, vmax, vmin):
-        if log:
-            spec = np.log10(inspec)
-            vmax = 2.5 if vmax is None else vmax
-            vmin = -3.0 if vmin is None else vmin
-        else:
-            spec = inspec
-            vmax = 10 if vmax is None else vmax
-            vmin = 0 if vmin is None else vmin
-        return spec, vmax, vmin
-
     def plot_some_spectrogram(self, inspec, title, ax=None, cmap=None,
                               cbar=True, log=False, showaxis=True,
                               min_=None, max_=None, set_extent=None,
@@ -362,7 +391,7 @@ class ScienceFitsFile(object):
         plot_hist = kwargs.pop('plot_hist', False)
         savename = kwargs.pop('savename', False)
 
-        spec, vmax, vmin = self.set_spec_vmax_vmin(log, inspec, vmax, vmin)
+        spec, vmax, vmin = set_spec_vmax_vmin(log, inspec, vmax, vmin)
         cmap = mycmap if cmap is None else cmap
 
         if ax is None:
@@ -383,12 +412,12 @@ class ScienceFitsFile(object):
             im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax,
                            aspect='auto', **kwargs)
 
-        self.do_labels(self, ax, title=title, set_extent=set_extent)
+        do_labels(self, ax, title=title, set_extent=set_extent)
 
         if not showaxis:
             ax.grid('off')
         if cbar:
-            self.plot_colorbar(im, ax, log)
+            plot_colorbar(im, ax, log)
 
         # rectangle
         if draw_rectangle:
@@ -396,7 +425,7 @@ class ScienceFitsFile(object):
 
         # inset histogram
         if plot_hist:
-            self.plot_hist(ax, spec)
+            plot_hist(ax, spec)
 
         if savename:
             ax.get_figure().savefig(savename, dpi=100)
@@ -405,30 +434,6 @@ class ScienceFitsFile(object):
         self.current_spec = spec
 
         return ax
-
-    def do_labels(self, ax, title='', set_extent=None):
-        ax.set_title(title)
-        if set_extent is True:
-            xlabel = 'Wavelength [nm]'
-        elif set_extent is False:
-            xlabel = 'Spectral bins'
-        else:
-            xlabel = 'set_extent not specified in do_labels'
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel('Spatial pixels')
-
-    def plot_colorbar(self, im, ax, log):
-        cb = plt.colorbar(im, ax=ax)
-        label = 'log(DN/s)' if log else 'DN/s'
-        cb.set_label(label, fontsize=14, rotation=0)
-
-    def plot_hist(self, ax, spec):
-        in_axes = inset_axes(ax, width="20%", height="20%",
-                             loc=2)
-        in_axes.hist(spec.ravel(), bins=20, normed=True)
-        plt.setp(in_axes.get_xticklabels(), visible=False)
-        plt.setp(in_axes.get_yticklabels(), visible=False)
-        in_axes.grid('off')
 
     def plot_some_profile(self, data_attr, integration,
                           spatial=None, ax=None, scale=False,
