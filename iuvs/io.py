@@ -319,6 +319,7 @@ class ScienceFitsFile(object):
         string = self.img_header['CAPTURE']
         return iuvs_utc_to_dtime(string)
 
+    # pylint: disable=no-self-use
     @property
     def n_darks(self):
         "To be overwritten by daughter class!"
