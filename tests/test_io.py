@@ -1,30 +1,42 @@
-import datetime as dt
-import os.path as osp
-import socket
-from pathlib import Path
+from __future__ import division
+
+import os
+
+import hypothesis.strategies as st
+import pytest
+from hypothesis import given
+from hypothesis.extra.datetime import datetimes
 
 from iuvs import io
-from iuvs.io import iuvs_utc_to_dtime
 
-host = socket.gethostname()
-
-
-def test_get_data_path():
-
-    if host.startswith('maven-iuvs-itf'):
-        for key, level in zip(['l0', 'l1a', 'l1b'],
-                              ['level0', 'level1a', 'level1b']):
-            for env in ['stage', 'production']:
-                root = '/maven_iuvs/' + env + '/products'
-                expected = osp.join(root, level)
-            assert io.get_data_path(key, env) == Path(expected)
+skiptravis = pytest.mark.skipif(os.environ['TRAVIS'] == 'true',
+                                reason='does not work on travis')
 
 
-def test_iuvs_utc_to_dtime():
-    s = '2015/085 Mar 26 17:45:19.96275UTC'
-    expected = dt.datetime.strptime("2015-03-26 17:45:19.962750",
-                                    '%Y-%m-%d %H:%M:%S.%f')
-    assert expected == iuvs_utc_to_dtime(s)
+@skiptravis
+@given(st.sampled_from(['l0', 'l1a', 'l1b']),
+       st.sampled_from(['stage', 'production'])
+       )
+def test_get_data_path(level, env):
+    path = str(io.get_data_path(level, env))
+    if os.path.exists(path):
+        assert True
+    elif os.access(os.path.dirname(path), os.R_OK):
+        assert True
+    else:
+        assert False
+    # assert osp.exists(str(path)) == True
+
+
+@given(datetimes(timezones=[], min_year=1900),
+       st.text(min_size=3, max_size=3),
+       )
+def test_iuvs_utc_to_dtime(date, extra):
+    newmics = date.microsecond // 10 * 10
+    expected = date.replace(microsecond=newmics)
+    format = '%Y/%j %b %d %H:%M:%S.%f'
+    teststr = date.strftime(format)[:-1] + extra
+    assert expected == io.iuvs_utc_to_dtime(teststr)
 
 
 def test_get_hk_filenames(monkeypatch):

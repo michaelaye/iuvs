@@ -1,0 +1,15 @@
+# Configuration for coverage.py
+
+[run]
+branch = True
+source = iuvs
+include = */iuvs/*
+omit = */idl/*
+
+[report]
+exclude_lines =
+    def __repr__
+    if __name__ == .__main__.:
+
+[html]
+directory = coverage_html_report

@@ -22,7 +22,7 @@ if host.startswith('maven-iuvs-itf'):
     production = Path('/maven_iuvs/production/products')
 else:
     stage = home / 'data' / 'iuvs'
-    production = home / 'data' / 'iuvs'
+    production = stage
 
 stagelevel1apath = stage / 'level1a'
 stagelevel1bpath = stage / 'level1b'
@@ -262,6 +262,45 @@ def iuvs_utc_to_dtime(utcstring):
     return time
 
 
+def set_spec_vmax_vmin(log, inspec, vmax, vmin):
+    if log:
+        spec = np.log10(inspec)
+        vmax = 2.5 if vmax is None else vmax
+        vmin = -3.0 if vmin is None else vmin
+    else:
+        spec = inspec
+        vmax = 10 if vmax is None else vmax
+        vmin = 0 if vmin is None else vmin
+    return spec, vmax, vmin
+
+
+def do_labels(ax, title='', set_extent=None):
+    ax.set_title(title)
+    if set_extent is True:
+        xlabel = 'Wavelength [nm]'
+    elif set_extent is False:
+        xlabel = 'Spectral bins'
+    else:
+        xlabel = 'set_extent not specified in do_labels'
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel('Spatial pixels')
+
+
+def plot_colorbar(im, ax, log):
+    cb = plt.colorbar(im, ax=ax)
+    label = 'log(DN/s)' if log else 'DN/s'
+    cb.set_label(label, fontsize=14, rotation=0)
+
+
+def plot_hist(ax, spec):
+    in_axes = inset_axes(ax, width="20%", height="20%",
+                         loc=2)
+    in_axes.hist(spec.ravel(), bins=20, normed=True)
+    plt.setp(in_axes.get_xticklabels(), visible=False)
+    plt.setp(in_axes.get_yticklabels(), visible=False)
+    in_axes.grid('off')
+
+
 class ScienceFitsFile(object):
 
     def __init__(self, fname):
@@ -282,7 +321,7 @@ class ScienceFitsFile(object):
 
     @property
     def n_integrations(self):
-        return int(self.Engineering.get_value(0, 'NUMBER'))
+        return int(getattr(self, 'Engineering').get_value(0, 'NUMBER'))
 
     @property
     def scaling_factor(self):
@@ -313,7 +352,7 @@ class ScienceFitsFile(object):
 
     @property
     def wavelengths(self):
-        return self.Observation['WAVELENGTH'][0]
+        return getattr(self, 'Observation')['WAVELENGTH'][0]
 
     @property
     def img_header(self):
@@ -343,10 +382,17 @@ class ScienceFitsFile(object):
         string = self.img_header['CAPTURE']
         return iuvs_utc_to_dtime(string)
 
+    # pylint: disable=no-self-use
+    @property
+    def n_darks(self):
+        "To be overwritten by daughter class!"
+        return None
+    # pylint: enable=no-self-use
+
     @property
     def integration_times(self):
         "Convert times from Integration table to pandas TimeSeries"
-        return self.Integration.loc['UTC'].map(iuvs_utc_to_dtime)
+        return getattr(self, 'Integration').loc['UTC'].map(iuvs_utc_to_dtime)
 
     def get_integration(self, data_attr, integration):
         data = getattr(self, data_attr)
@@ -361,17 +407,6 @@ class ScienceFitsFile(object):
             spec = data
         return spec
 
-    def set_spec_vmax_vmin(self, log, inspec, vmax, vmin):
-        if log:
-            spec = np.log10(inspec)
-            vmax = 2.5 if vmax is None else vmax
-            vmin = -3.0 if vmin is None else vmin
-        else:
-            spec = inspec
-            vmax = 10 if vmax is None else vmax
-            vmin = 0 if vmin is None else vmin
-        return spec, vmax, vmin
-
     def plot_some_spectrogram(self, inspec, title, ax=None, cmap=None,
                               cbar=True, log=False, showaxis=True,
                               min_=None, max_=None, set_extent=None,
@@ -380,7 +415,7 @@ class ScienceFitsFile(object):
         plot_hist = kwargs.pop('plot_hist', False)
         savename = kwargs.pop('savename', False)
 
-        spec, vmax, vmin = self.set_spec_vmax_vmin(log, inspec, vmax, vmin)
+        spec, vmax, vmin = set_spec_vmax_vmin(log, inspec, vmax, vmin)
         cmap = mycmap if cmap is None else cmap
 
         if ax is None:
@@ -401,12 +436,12 @@ class ScienceFitsFile(object):
             im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax,
                            aspect='auto', **kwargs)
 
-        self.do_labels(self, ax, title=title, set_extent=set_extent)
+        do_labels(self, ax, title=title, set_extent=set_extent)
 
         if not showaxis:
             ax.grid('off')
         if cbar:
-            self.plot_colorbar(im, ax, log)
+            plot_colorbar(im, ax, log)
 
         # rectangle
         if draw_rectangle:
@@ -414,7 +449,7 @@ class ScienceFitsFile(object):
 
         # inset histogram
         if plot_hist:
-            self.plot_hist(ax, spec)
+            plot_hist(ax, spec)
 
         if savename:
             ax.get_figure().savefig(savename, dpi=100)
@@ -423,30 +458,6 @@ class ScienceFitsFile(object):
         self.current_spec = spec
 
         return ax
-
-    def do_labels(self, ax, title='', set_extent=None):
-        ax.set_title(title)
-        if set_extent is True:
-            xlabel = 'Wavelength [nm]'
-        elif set_extent is False:
-            xlabel = 'Spectral bins'
-        else:
-            xlabel = 'set_extent not specified in do_labels'
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel('Spatial pixels')
-
-    def plot_colorbar(self, im, ax, log):
-        cb = plt.colorbar(im, ax=ax)
-        label = 'log(DN/s)' if log else 'DN/s'
-        cb.set_label(label, fontsize=14, rotation=0)
-
-    def plot_hist(self, ax, spec):
-        in_axes = inset_axes(ax, width="20%", height="20%",
-                             loc=2)
-        in_axes.hist(spec.ravel(), bins=20, normed=True)
-        plt.setp(in_axes.get_xticklabels(), visible=False)
-        plt.setp(in_axes.get_yticklabels(), visible=False)
-        in_axes.grid('off')
 
     def plot_some_profile(self, data_attr, integration,
                           spatial=None, ax=None, scale=False,
@@ -587,22 +598,22 @@ class L1BReader(ScienceFitsFile):
                 setattr(self, name, pd.DataFrame(hdu.data))
             else:
                 setattr(self, hdu.header['EXTNAME'], hdu.data)
-        self.darks_interpolated = self.background_dark
+        self.darks_interpolated = getattr(self, 'background_dark')
 
     @property
     def dark_det_temps(self):
-        return self.Dark_Integration['DET_TEMP_C']
+        return getattr(self, 'Dark_Integration')['DET_TEMP_C']
 
     @property
     def dark_case_temps(self):
-        return self.Dark_Integration['CASE_TEMP_C']
+        return getattr(self, 'Dark_Integration')['CASE_TEMP_C']
 
     @property
     def dark_times(self):
         try:
-            utcs = self.DarkIntegration['UTC']
+            utcs = getattr(self, 'DarkIntegration')['UTC']
         except AttributeError:
-            utcs = self.Dark_Integration['UTC']
+            utcs = getattr(self, 'Dark_Integration')['UTC']
         times = []
         for utc in utcs:
             times.append(iuvs_utc_to_dtime(utc))
@@ -610,22 +621,22 @@ class L1BReader(ScienceFitsFile):
 
     @property
     def n_darks(self):
-        return self.detector_dark.shape[0]
+        return getattr(self, 'detector_dark').shape[0]
 
     @property
     def raw_dn_s(self):
-        return (self.detector_raw / self.scaling_factor) + 0.001
+        return (getattr(self, 'detector_raw') / self.scaling_factor) + 0.001
 
     @property
     def dark_dn_s(self):
-        return (self.detector_dark / self.scaling_factor) + 0.001
+        return (getattr(self, 'detector_dark') / self.scaling_factor) + 0.001
 
     @property
     def dds_dn_s(self):
         try:
-            dds = self.detector_dark_subtracted
+            dds = getattr(self, 'detector_dark_subtracted')
         except AttributeError:
-            dds = self.detector_background_subtracted
+            dds = getattr(self, 'detector_background_subtracted')
         return (dds / self.scaling_factor) + 0.001
 
     def plot_raw_spectrogram(self, integration=None, ax=None,

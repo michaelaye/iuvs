@@ -38,20 +38,20 @@ class HKReader(object):
             setattr(self, name + '_header', hdu.header)
             setattr(self, name, hdu.data)
 
-        temp_cols = [value for value in self.AnalogConv_header.values()
+        temp_cols = [value for value in getattr(self, 'AnalogConv_header').values()
                      if 'temp' in str(value).lower()]
         self.temp_cols = temp_cols
         self.get_temp_table()
         self.fpath = Path(fname)
 
     def get_temp_table(self):
-        table = self.AnalogConv  # this table is set during init.
+        table = getattr(self, 'AnalogConv')  # this table is set during init.
         utc = calc_utc_from_sclk(table['SC_CLK_COARSE'],
                                  table['SC_CLK_FINE'])
 
         d = {}
         for col in self.temp_cols:
-            data = self.AnalogConv[col]
+            data = table[col]
             sys_byteorder = ('>', '<')[sys.byteorder == 'little']
             if data.dtype.byteorder not in ('=', sys_byteorder):
                 d[col] = data.byteswap().newbyteorder(sys_byteorder)

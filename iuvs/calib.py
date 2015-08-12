@@ -1,5 +1,5 @@
 import numpy as np
-from collections import namedtuple
+
 
 # ;-----Original Message-----
 # ;From: Justin Deighan
@@ -56,8 +56,10 @@ def iuvs_dn_to_temp(dn, inverse=False, det_temp=True):
 
     if not det_temp:
         # ;All of the analog telemetry temperatures use the same split polynomial conversion:
-        # ;DN from 0 to 8191: C0=1.8195   C1=-6.221E-3   C2=1.6259E-7   C3=-7.3832E-11   C4=-2.9933E-16
-        # ;DN from 8192 to 16382: C0=450.47   C1=-6.5734E-2   C2=3.3093E-6   C3=-5.4216E-11   C4=-2.933E-16
+        # ;DN from 0 to 8191: C0=1.8195   C1=-6.221E-3   C2=1.6259E-7
+        # ;C3=-7.3832E-11   C4=-2.9933E-16
+        # ;DN from 8192 to 16382: C0=450.47   C1=-6.5734E-2   C2=3.3093E-6
+        # ;C3=-5.4216E-11  C4=-2.933E-16
         # ;
         # ;D
         # ;
@@ -86,7 +88,7 @@ def iuvs_dn_to_temp(dn, inverse=False, det_temp=True):
             result[w] = poly0(dn[w])
             result[~w] = poly1(dn[~w])
             return result
-    else: # if det_temp == True
+    else:  # if det_temp == True
         # for the chip temperatures: (DN * -0.0749) + 174.08
         a = -0.0749
         b = 174.08

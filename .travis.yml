@@ -18,13 +18,21 @@ before_install:
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
   - pip install pathlib
-  - pip install .
+  - pip install pytest-cov
+  - pip install coveralls
+  - pip install hypothesis
+  - python setup.py install
 
-cache: false
-  # pip: true
-  # directories:
-  #   - $HOME/miniconda
+cache:
+  directories:
+    - $HOME/.cache/pip
 
 # command to run tests, e.g. python setup.py test
 script:
-  - py.test
+  - py.test --cov .
+
+after_success:
+  - coveralls
+
+notifications:
+  slack: iuvs:LiU7zTHNsZxNMjXkKndLEGQc
