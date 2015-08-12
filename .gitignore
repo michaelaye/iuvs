@@ -63,3 +63,4 @@ target/
 *.mp4
 */.hypothesis/
 tags
+.hypothesis
