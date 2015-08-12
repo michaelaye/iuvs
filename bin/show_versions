@@ -1,7 +1,9 @@
 #!/usr/bin/env python
-from iuvs import io
-import pandas as pd
 import argparse
+
+import pandas as pd
+
+from iuvs import io
 
 
 def get_version_string_from_fname(fname):
@@ -9,10 +11,16 @@ def get_version_string_from_fname(fname):
     return iuvsfname.version + iuvsfname.revision
 
 
-def show_existing_versions(level, stage):
-    fnames = io.get_filenames(level, pattern=None, env=stage, iterator=False)
-    df = pd.DataFrame(fnames, columns=['fname'])
-    df['version_string'] = df.fname.map(get_version_string_from_fname)
+def show_existing_versions(level, env, hk=False):
+    if not hk:
+        fnames = io.get_filenames(level, pattern=None, env=env)
+    else:
+        fnames = io.get_hk_filenames(env=env)
+    df = pd.DataFrame(list(fnames), columns=['fname'])
+    if not hk:
+        df['version_string'] = df.fname.map(get_version_string_from_fname)
+    else:
+        df['version_string'] = df.fname.map(lambda x: io.HKFilename(x).version)
     print("Version  Counts")
     print(df.version_string.value_counts())
 
@@ -23,5 +31,7 @@ if __name__ == '__main__':
                         help='The level you want to check.')
     parser.add_argument('env', type=str, choices=['stage', 'production'],
                         help='Which environment you want to look at.')
+    parser.add_argument('--hk', action='store_true',
+                        help='Switch to show results for HK data instead.')
     args = parser.parse_args()
-    show_existing_versions(args.level, args.env)
+    show_existing_versions(args.level, args.env, args.hk)

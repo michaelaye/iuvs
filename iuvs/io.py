@@ -11,7 +11,7 @@ from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from scipy.ndimage.filters import generic_filter
 
-from .exceptions import DimensionsError
+from .exceptions import DimensionsError, PathNotReadableError, UnknownEnvError
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -27,6 +27,7 @@ else:
 stagelevel1apath = stage / 'level1a'
 stagelevel1bpath = stage / 'level1b'
 stagelevel0path = stage / 'level0'
+stagehkpath = stage / 'housekeeping' / 'level1a'
 productionlevel1apath = production / 'level1a'
 productionlevel1bpath = production / 'level1b'
 productionlevel0path = production / 'level0'
@@ -37,8 +38,18 @@ plotfolder = HOME / 'plots'
 outputfolder = HOME / 'output'
 
 
-def get_hk_filenames():
-    return [str(i) for i in productionhkpath.glob('*')]
+def get_hk_filenames(env='stage', iterator=True):
+    if env == 'production':
+        if os.access(str(productionhkpath), os.R_OK):
+            path = productionhkpath
+        else:
+            raise PathNotReadableError(productionhkpath)
+    elif env == 'stage':
+        path = stagehkpath
+    else:
+        raise UnknownEnvError(env)
+    result = map(str, path.glob('*'))
+    return result if iterator else list(result)
 
 
 def get_data_path(level, env='stage'):
@@ -156,15 +167,17 @@ def save_to_hdf(df, fname, output_subdir=None):
 class Filename(object):
 
     def __init__(self, fname):
-        try:
-            self.root = os.path.dirname(fname)
-            self.basename = os.path.basename(fname)
-        except AttributeError:
-            # happens if fname is a PosixPath
-            self.root = str(fname.parent)
-            self.basename = fname.name
-        tokens = self.basename.split('_')
-        self.mission, self.instrument = tokens[:2]
+        self.root = os.path.dirname(str(fname))
+        self.basename = os.path.basename(fname)
+        self.tokens = self.basename.split('_')
+        self.mission, self.instrument = self.tokens[:2]
+
+
+class ScienceFilename(Filename):
+
+    def __init__(self, fname):
+        super(ScienceFilename, self).__init__(fname)
+        tokens = self.tokens
         self.level = tokens[2]
         self.phase = tokens[3]
         self.timestr, self.version = tokens[4:6]
@@ -214,6 +227,17 @@ class Filename(object):
 
     def __str__(self):
         return self.__repr__()
+
+
+class HKFilename(Filename):
+
+    def __init__(self, fname):
+        super(HKFilename, self).__init__(fname)
+        tokens = self.tokens
+        self.kind = tokens[2]
+        self.level = tokens[3]
+        self.datestring = tokens[4]
+        self.version = tokens[5].split('.')[0]
 
 
 class FitsBinTable(object):
