@@ -20,6 +20,7 @@ install:
   - pip install pathlib
   - pip install pytest-cov
   - pip install coveralls
+  - pip install hypothesis
   - python setup.py install
 
 cache:
