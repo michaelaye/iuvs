@@ -1,14 +1,18 @@
-import datetime as dt
+from __future__ import division
+
 import os
-from pathlib import Path
 
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
+from hypothesis.extra.datetime import datetimes
 
 from iuvs import io
 
+skiptravis = pytest.mark.skipif(os.environ['TRAVIS'] == 'true')
 
+
+@skiptravis
 @given(st.sampled_from(['l0', 'l1a', 'l1b']),
        st.sampled_from(['stage', 'production'])
        )
@@ -23,11 +27,15 @@ def test_get_data_path(level, env):
     # assert osp.exists(str(path)) == True
 
 
-def test_iuvs_utc_to_dtime():
-    s = '2015/085 Mar 26 17:45:19.96275UTC'
-    expected = dt.datetime.strptime("2015-03-26 17:45:19.962750",
-                                    '%Y-%m-%d %H:%M:%S.%f')
-    assert expected == io.iuvs_utc_to_dtime(s)
+@given(datetimes(timezones=[]),
+       st.text(min_size=3, max_size=3),
+       )
+def test_iuvs_utc_to_dtime(date, extra):
+    newmics = date.microsecond // 10 * 10
+    expected = date.replace(microsecond=newmics)
+    format = '%Y/%j %b %d %H:%M:%S.%f'
+    teststr = date.strftime(format)[:-1] + extra
+    assert expected == io.iuvs_utc_to_dtime(teststr)
 
 
 def test_get_hk_filenames(monkeypatch):
