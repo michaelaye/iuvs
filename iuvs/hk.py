@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -29,6 +30,7 @@ def calc_utc_from_sclk(coarse, fine):
 
 
 class HKReader(object):
+
     def __init__(self, fname):
         self.hdulist = fits.open(fname)
         for hdu in self.hdulist[1:]:
@@ -40,6 +42,7 @@ class HKReader(object):
                      if 'temp' in str(value).lower()]
         self.temp_cols = temp_cols
         self.get_temp_table()
+        self.fpath = Path(fname)
 
     def get_temp_table(self):
         table = self.AnalogConv  # this table is set during init.
@@ -55,3 +58,6 @@ class HKReader(object):
             else:
                 d[col] = data
         self.temp_df = pd.DataFrame(d, index=utc)
+
+    def save_temps_to_hdf(self, fname):
+        self.temp_df.to_hdf(fname, 'df')
