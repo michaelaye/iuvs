@@ -9,7 +9,8 @@ from hypothesis.extra.datetime import datetimes
 
 from iuvs import io
 
-skiptravis = pytest.mark.skipif(os.environ['TRAVIS'] == 'true')
+skiptravis = pytest.mark.skipif(os.environ['TRAVIS'] == 'true',
+                                reason='does not work on travis')
 
 
 @skiptravis

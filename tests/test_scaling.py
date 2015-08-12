@@ -1,5 +1,7 @@
+import hypothesis.strategies as st
 import numpy as np
 import pytest
+from hypothesis import given
 
 from iuvs import scaling
 
@@ -47,7 +49,7 @@ def test_addscaler_random():
     scaler.do_fit()
     target = spec[xslice, yslice].mean()
     start = dark[xslice, yslice].mean()
-    e = 1e-10
+    e = 1e-8
     expected = target - start
     assert (expected - scaler.p[0]) < e
 
