@@ -27,7 +27,7 @@ def test_get_data_path(level, env):
     # assert osp.exists(str(path)) == True
 
 
-@given(datetimes(timezones=[]),
+@given(datetimes(timezones=[], min_year=1900),
        st.text(min_size=3, max_size=3),
        )
 def test_iuvs_utc_to_dtime(date, extra):
