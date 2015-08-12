@@ -33,3 +33,6 @@ script:
 
 after_success:
   - coveralls
+
+notifications:
+  slack: iuvs:LiU7zTHNsZxNMjXkKndLEGQc
