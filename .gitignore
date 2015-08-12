@@ -60,3 +60,6 @@ target/
 *.sublime-workspace
 *.h5
 *.hdf
+*.mp4
+*/.hypothesis/
+tags

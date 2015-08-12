@@ -1,30 +1,33 @@
 import datetime as dt
-import os.path as osp
-import socket
+import os
 from pathlib import Path
 
+import hypothesis.strategies as st
+import pytest
+from hypothesis import given
+
 from iuvs import io
-from iuvs.io import iuvs_utc_to_dtime
-
-host = socket.gethostname()
 
 
-def test_get_data_path():
-
-    if host.startswith('maven-iuvs-itf'):
-        for key, level in zip(['l0', 'l1a', 'l1b'],
-                              ['level0', 'level1a', 'level1b']):
-            for env in ['stage', 'production']:
-                root = '/maven_iuvs/' + env + '/products'
-                expected = osp.join(root, level)
-            assert io.get_data_path(key, env) == Path(expected)
+@given(st.sampled_from(['l0', 'l1a', 'l1b']),
+       st.sampled_from(['stage', 'production'])
+       )
+def test_get_data_path(level, env):
+    path = str(io.get_data_path(level, env))
+    if os.path.exists(path):
+        assert True
+    elif os.access(os.path.dirname(path), os.R_OK):
+        assert True
+    else:
+        assert False
+    # assert osp.exists(str(path)) == True
 
 
 def test_iuvs_utc_to_dtime():
     s = '2015/085 Mar 26 17:45:19.96275UTC'
     expected = dt.datetime.strptime("2015-03-26 17:45:19.962750",
                                     '%Y-%m-%d %H:%M:%S.%f')
-    assert expected == iuvs_utc_to_dtime(s)
+    assert expected == io.iuvs_utc_to_dtime(s)
 
 
 def test_get_hk_filenames(monkeypatch):
