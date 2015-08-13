@@ -3,9 +3,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import SpiceyPy as spice
 from astropy.io import fits
-
-import SpicepyPy as spice
 
 from .spice import load_kernels
 
@@ -15,7 +14,13 @@ def format_times(sec, subsec):
 
 
 def calc_utc_from_sclk(coarse, fine):
-    load_kernels()  # load SPICE kernels
+    """Requires to have SPICE kernels loaded (use load_kernels()).
+
+    I'm not doing the loading of SPICE kernels in here so that I can
+    run this function in a loop without using up kernel space.
+    The caller should load and unload kernels as required.
+    """
+    # load_kernels()  # load SPICE kernels
     timestamp_ = coarse
     ss = fine
     mavenid, _ = spice.bodn2c('MAVEN')
