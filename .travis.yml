@@ -29,7 +29,7 @@ cache:
 
 # command to run tests, e.g. python setup.py test
 script:
-  - py.test --cov .
+  - py.test -s --cov .
 
 after_success:
   - coveralls
