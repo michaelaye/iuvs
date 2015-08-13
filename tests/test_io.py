@@ -9,6 +9,8 @@ from hypothesis.extra.datetime import datetimes
 
 from iuvs import io
 
+if not hasattr(os.environ, 'TRAVIS'):
+    os.environ['TRAVIS'] = 'false'
 skiptravis = pytest.mark.skipif(os.environ['TRAVIS'] == 'true',
                                 reason='does not work on travis')
 
@@ -42,6 +44,38 @@ def test_iuvs_utc_to_dtime(date, extra):
 def test_get_hk_filenames(monkeypatch):
     pass
 
+
+def test_Filename():
+    p = '/Users/klay6683/data/iuvs/level1b/'\
+        'mvn_iuv_l1b_cruisecal2-mode080-muv_20140521T120029_v01_r01.fits.gz'
+    fn = io.Filename(p)
+    assert fn.mission == 'mvn'
+    assert fn.instrument == 'iuv'
+    assert fn.basename == 'mvn_iuv_l1b_cruisecal2-mode080-'\
+                          'muv_20140521T120029_v01_r01.fits.gz'
+    assert fn.root == '/Users/klay6683/data/iuvs/level1b'
+
+def test_HKFilename():
+    p = '/maven_iuvs/stage/products/housekeeping/level1a/'\
+        'mvn_iuv_analog_l0_20140405_v003.fits.gz'
+    hkfn = io.HKFilename(p)
+    assert hkfn.datestring == '20140405'
+    assert hkfn.kind == 'analog'
+    assert hkfn.version == 'v003'
+    assert hkfn.level == 'l0'
+
+
+def test_ScienceFilename():
+    p = '/Users/klay6683/data/iuvs/level1b/'\
+        'mvn_iuv_l1b_cruisecal2-mode080-muv_20140521T120029_v01_r01.fits.gz'
+    fn = io.ScienceFilename(p)
+    assert fn.channel == 'muv'
+    assert fn.cycle_orbit == 'mode080'
+    assert fn.mode == 'N/A'
+    assert fn.phase == 'cruisecal2'
+    assert fn.obs_id == 'mvn_iuv_l1b_cruisecal2-mode080-muv_20140521T120029'
+    assert fn.version == 'v01'
+    assert fn.revision == 'r01'
 
 class TestFitsFile:
 
