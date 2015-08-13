@@ -116,23 +116,27 @@ def image_stats(data):
     return pd.Series(data.ravel()).describe()
 
 
-def get_filename_stats(level):
-    fnames = get_filenames(level, pattern=None)
+def get_filename_stats(level, env='stage'):
+    if level != 'hk':
+        fnames = get_filenames(level, env=env, pattern=None)
+        Filename = ScienceFilename
+    else:
+        fnames = get_hk_filenames(env=env)
+        Filename = HKFilename
     iuvs_fnames = []
-    exceptions = []
     for fname in fnames:
-        try:
-            iuvs_fnames.append(ScienceFilename(fname))
-        except Exception:
-            exceptions.append(fname)
-            continue
+        iuvs_fnames.append(Filename(fname))
     s = pd.Series(iuvs_fnames)
     df = pd.DataFrame()
-    for item in 'phase cycle_orbit mode channel time level version revision'.split():
-        df[item] = s.map(lambda x: getattr(x, item))
-    df['channel'] = df.channel.astype('category')
-    df.set_index('time', inplace=True)
-    df.sort_index(inplace=True)
+    keys = [i for i in dir(iuvs_fnames[0]) if not i.startswith('_')]
+    for key in keys:
+        df[key] = s.map(lambda x: getattr(x, key))
+    if level != 'hk':
+        df['channel'] = df.channel.astype('category')
+        df.set_index('time', inplace=True)
+        df.sort_index(inplace=True)
+    else:
+        df.sort('datestring')
     return df
 
 
