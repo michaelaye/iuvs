@@ -6,8 +6,6 @@ import pandas as pd
 import SpiceyPy as spice
 from astropy.io import fits
 
-from .spice import load_kernels
-
 
 def format_times(sec, subsec):
     return "{:010d}.{:05d}".format(int(sec), int(subsec))
