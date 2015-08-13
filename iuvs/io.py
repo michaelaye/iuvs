@@ -881,19 +881,17 @@ def check_scaling_window_finder(l1b, integration):
     axes[2].hist(filtered[~np.isnan(filtered)].ravel(), bins=100)
 
 
-def some_l1a(pattern=''):
+def some_file(level, pattern):
     try:
-        fname = l1a_filenames(pattern, iterator=False)[0]
+        fname = get_filenames(level, pattern=pattern, iterator=False)[0]
     except IndexError:
-        print("No L1A files found.")
-        return
-    return L1AReader(fname)
+        print("No {} files found.".format(level))
+    return fname
+
+
+def some_l1a(pattern=''):
+    return L1AReader(some_file('l1a', pattern))
 
 
 def some_l1b(pattern=''):
-    try:
-        fname = l1b_filenames(pattern, iterator=False)[0]
-    except IndexError:
-        print("No L1B files found.")
-        return
-    return L1BReader(fname)
+    return L1BReader(some_file('l1b', pattern))
