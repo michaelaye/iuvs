@@ -9,7 +9,7 @@ from hypothesis.extra.datetime import datetimes
 
 from iuvs import io
 
-skiptravis = pytest.mark.skipif('TRAVIS' in os.environ and \
+skiptravis = pytest.mark.skipif('TRAVIS' in os.environ and
                                 os.environ['TRAVIS'] == 'true',
                                 reason='does not work on travis')
 
@@ -54,6 +54,7 @@ def test_Filename():
                           'muv_20140521T120029_v01_r01.fits.gz'
     assert fn.root == '/Users/klay6683/data/iuvs/level1b'
 
+
 def test_HKFilename():
     p = '/maven_iuvs/stage/products/housekeeping/level1a/'\
         'mvn_iuv_analog_l0_20140405_v003.fits.gz'
@@ -62,6 +63,7 @@ def test_HKFilename():
     assert hkfn.kind == 'analog'
     assert hkfn.version == 'v003'
     assert hkfn.level == 'l0'
+    assert hkfn.obs_id == 'mvn_iuv_analog_l0_20140405'
 
 
 def test_ScienceFilename():
@@ -75,6 +77,7 @@ def test_ScienceFilename():
     assert fn.obs_id == 'mvn_iuv_l1b_cruisecal2-mode080-muv_20140521T120029'
     assert fn.version == 'v01'
     assert fn.revision == 'r01'
+
 
 class TestFitsFile:
 
