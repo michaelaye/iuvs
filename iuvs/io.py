@@ -181,6 +181,7 @@ def save_to_hdf(df, fname, output_subdir=None):
 class Filename(object):
 
     def __init__(self, fname):
+        self.p = Path(fname)
         self.root = os.path.dirname(str(fname))
         self.basename = os.path.basename(fname)
         self.tokens = self.basename.split('_')
@@ -252,6 +253,7 @@ class HKFilename(Filename):
         self.level = tokens[3]
         self.datestring = tokens[4]
         self.version = tokens[5].split('.')[0]
+        self.obs_id = '_'.join(self.basename.split('_')[:5])
 
 
 class FitsBinTable(object):
