@@ -116,13 +116,13 @@ def image_stats(data):
     return pd.Series(data.ravel()).describe()
 
 
-def get_l1a_filename_stats():
-    fnames = l1a_filenames()
+def get_filename_stats(level):
+    fnames = get_filenames(level, pattern=None)
     iuvs_fnames = []
     exceptions = []
     for fname in fnames:
         try:
-            iuvs_fnames.append(Filename(fname))
+            iuvs_fnames.append(ScienceFilename(fname))
         except Exception:
             exceptions.append(fname)
             continue
