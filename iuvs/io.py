@@ -140,6 +140,16 @@ def get_filename_stats(level, env='stage'):
     return df
 
 
+def get_current_hk_fnames(env='stage'):
+    df = get_filename_stats('hk', env=env)
+    return df.groupby('obs_id')['p'].max()
+
+
+def get_current_science_fnames(level, pattern=None, env='stage'):
+    df = get_filename_stats(level, env=env)
+    return df.groupby('obs_id')['basename'].max()
+
+
 def get_header_df(hdu, drop_comment=True):
     """Take a FITS HDU, convert to DataFrame.
 
