@@ -452,7 +452,7 @@ class ScienceFitsFile(object):
             im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax,
                            aspect='auto', **kwargs)
 
-        do_labels(self, ax, title=title, set_extent=set_extent)
+        do_labels(ax, title=title, set_extent=set_extent)
 
         if not showaxis:
             ax.grid('off')
@@ -699,7 +699,7 @@ class L1BReader(ScienceFitsFile):
                               spatial=spatial, plot_hist=prof_plot_hist)
 
         # colorbar
-        im = ax.get_images()[0]
+        im = ax.get_images()[0]  # pylint: disable=no-member
         fig.tight_layout()
         fig.subplots_adjust(top=0.9, bottom=0.1)
         # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
@@ -716,8 +716,6 @@ class L1BReader(ScienceFitsFile):
             fname = "{}_{}.png".format(self.plotfname,
                                        save_token)
             fig.savefig(os.path.join(str(plotfolder), fname), dpi=150)
-
-        return fig
 
     def plot_mean_values(self, item):
         fig, ax = plt.subplots()

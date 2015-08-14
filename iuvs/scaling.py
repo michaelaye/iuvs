@@ -43,6 +43,8 @@ class DarkScaler(object):
     This is the base class that is inherited by the other scalers.
     """
 
+    name = "to be overwritten by daughter class"
+
     def __init__(self, data_in, data_out, alternative=False):
         self.data_in = data_in
         self.data_out = data_out
@@ -55,6 +57,10 @@ class DarkScaler(object):
         if self.alternative:
             self.p = np.array([self.expected()])
         self.perr = np.sqrt(np.diag(self.pcov))
+
+    def model(self):
+        "Overwrite in daughter class!"
+        pass
 
     @property
     def scaled(self):
@@ -135,7 +141,7 @@ class PolyScaler(DarkScaler):
     def __init__(self, data_in, data_out, rank=2):
         super(PolyScaler, self).__init__(data_in, data_out)
         self.rank = rank
-        self.name = 'Poly'+str(self.rank)
+        self.name = 'Poly' + str(self.rank)
 
     @property
     def rank(self):
@@ -204,7 +210,7 @@ class PolyScalerManager(object):
         coeffs = []
         polynoms = []
         scalers = []
-        for rank in range(rankstart, rankend+1):
+        for rank in range(rankstart, rankend + 1):
             scaler = PolyScaler(data_in, data_out, rank)
             scaler.do_fit()
             scalers.append(scaler)
@@ -217,10 +223,10 @@ class PolyScalerManager(object):
         self.scalers = scalers
 
     def plot_fractionals(self):
-        plt.plot(range(self.rankstart, self.rankend+1),
+        plt.plot(range(self.rankstart, self.rankend + 1),
                  self.fractionals)
         plt.xlabel('Polynomial rank')
-        plt.xlim(0, self.rankend+2)
+        plt.xlim(0, self.rankend + 2)
         plt.title('Mean values of fractional residual'
                   ' over polynomial rank')
         plt.ylabel('Mean value of fracional residual')
@@ -290,7 +296,7 @@ class DarkFitter(object):
         return subdata.mean(), subdata.std()
 
     def plot_profiles(self, save_token=None):
-        fig, axes = plt.subplots(nrows=len(self.scalers)+3, sharex=True)
+        fig, axes = plt.subplots(nrows=len(self.scalers) + 3, sharex=True)
 
         # raw profile
         self.l1b.plot_raw_profile(self.raw_integration, ax=axes[0], log=False)
@@ -309,7 +315,7 @@ class DarkFitter(object):
                      transform=axes[2].transAxes, fontsize=10)
 
         # scaled fits
-        spatial = self.l1b.spatial_size//2
+        spatial = self.l1b.spatial_size // 2
         for scaler, ax in zip(self.scalers, axes[3:]):
             fitted_dark = scaler.apply_fit(self.fulldark)
             sub = self.fullraw - fitted_dark
@@ -347,7 +353,7 @@ class DarkFitter(object):
                      fontsize=11)
         fig.subplots_adjust(top=0.90, bottom=0.07)
         if save_token is not None:
-            fname = io.HOME / 'plots' / (self.l1b.plotfname+'_2_'+save_token+'.png')
+            fname = io.HOME / 'plots' / (self.l1b.plotfname + '_2_' + save_token + '.png')
             fig.savefig(str(fname), dpi=150)
 
 
@@ -378,7 +384,7 @@ def do_all(l1b, integration, fullraw=None, fulldark=None, log=False):
     scalers = [AddScaler, MultScaler, PolyScaler1,
                PolyScaler2]
 
-    fig, axes = plt.subplots(nrows=len(scalers)+3, sharex=True)
+    fig, axes = plt.subplots(nrows=len(scalers) + 3, sharex=True)
 
     l1b.plot_raw_profile(integration, ax=axes[0], log=log)
     axes[0].set_ylim(*np.percentile(fullraw, (2, 96)))
@@ -403,7 +409,7 @@ def do_all(l1b, integration, fullraw=None, fulldark=None, log=False):
     axes[2].text(.5, .9, title, horizontalalignment='center',
                  transform=axes[2].transAxes, fontsize=10)
 
-    spatial = l1b.spatial_size//2
+    spatial = l1b.spatial_size // 2
     for Scaler, ax in zip(scalers, axes[3:]):
         if Scaler == MultScaler:
             scaler = Scaler(dark_subframe, light_subframe, alternative=True)
@@ -447,7 +453,7 @@ def do_all(l1b, integration, fullraw=None, fulldark=None, log=False):
                          spe_slice.stop),
                  fontsize=11)
     fig.subplots_adjust(top=0.90, bottom=0.07)
-    fig.savefig('/home/klay6683/plots/'+l1b.plotfname+'_2.png', dpi=150)
+    fig.savefig('/home/klay6683/plots/' + l1b.plotfname + '_2.png', dpi=150)
 
 
 class KindHeader(fits.Header):
