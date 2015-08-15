@@ -6,10 +6,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from astropy.io import fits
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from scipy.ndimage.filters import generic_filter
+
+from astropy.io import fits
 
 from .exceptions import DimensionsError, PathNotReadableError, UnknownEnvError
 
@@ -423,6 +424,13 @@ class ScienceFitsFile(object):
             spec = data
         return spec
 
+    def get_n_data_attr(self, data_attr):
+        data = getattr(self, data_attr)
+        if data.ndim == 3:
+            return data.shape[0]
+        else:
+            return 1
+
     def plot_some_spectrogram(self, inspec, title, ax=None, cmap=None,
                               cbar=True, log=False, showaxis=True,
                               min_=None, max_=None, set_extent=None,
@@ -482,10 +490,7 @@ class ScienceFitsFile(object):
         plot_hist = kwargs.pop('plot_hist', False)
         savename = kwargs.pop('savename', False)
         spec = self.get_integration(data_attr, integration)
-        if 'dark' in data_attr:
-            nints = self.n_darks
-        else:
-            nints = self.n_integrations
+        nints = self.get_n_data_attr(data_attr)
         if scale:
             spec = spec / self.scaling_factor
         if spatial is None:
@@ -547,6 +552,7 @@ class ScienceFitsFile(object):
 
     def plot_img_profile(self, integration=None, ax=None, log=True,
                          **kwargs):
+
         return self.plot_some_profile('img', integration, ax=ax,
                                       **kwargs)
 
@@ -760,19 +766,17 @@ class L1BReader(ScienceFitsFile):
         self.spa_slice, self.spe_slice = find_scaling_window(spec)
         return self.spa_slice, self.spe_slice
 
-    def plot_raw_profile(self, integration=None, ax=None, log=None,
+    def plot_raw_profile(self, integration=-1, ax=None, log=None,
                          spatial=None, **kwargs):
-        if integration is None:
-            integration = -1
         return self.plot_some_profile('raw_dn_s', integration,
                                       ax=ax, log=log, spatial=spatial,
                                       **kwargs)
 
-    def plot_dark_profile(self, integration, ax=None, log=None):
+    def plot_dark_profile(self, integration=-1, ax=None, log=None):
         return self.plot_some_profile('dark_dn_s', integration,
                                       ax=ax, log=log)
 
-    def plot_dds_profile(self, integration, ax=None, log=None):
+    def plot_dds_profile(self, integration=-1, ax=None, log=None):
         return self.plot_some_profile('dds_dn_s', integration,
                                       ax=ax, log=log)
 
@@ -887,9 +891,9 @@ def some_file(level, pattern):
     return fname
 
 
-def some_l1a(pattern=''):
+def some_l1a(pattern=None):
     return L1AReader(some_file('l1a', pattern))
 
 
-def some_l1b(pattern=''):
+def some_l1b(pattern=None):
     return L1BReader(some_file('l1b', pattern))
