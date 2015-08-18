@@ -1,11 +1,16 @@
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from . import scaling, io
-import numpy as np
-from .multitools import *
+import os
 import sys
+
+import matplotlib
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+
+from . import io, scaling
+from .multitools import IntProgress, display
+
+matplotlib.use('Agg')
 
 
 def apply_and_compare(l1b, Scaler=scaling.PolyScaler1):
@@ -85,7 +90,7 @@ def apply_and_compare(l1b, Scaler=scaling.PolyScaler1):
                                 dpi=120)
                     writer.grab_frame()
                 plt.close(fig)
-            prog.value = nraw+1
+            prog.value = nraw + 1
 
 if __name__ == '__main__':
     l1b = io.L1BReader(sys.argv[1])

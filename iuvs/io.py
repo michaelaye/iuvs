@@ -5,11 +5,12 @@ import socket
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from astropy.io import fits
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from pathlib import Path
 from scipy.ndimage.filters import generic_filter
+
+from astropy.io import fits
 
 from .exceptions import DimensionsError, PathNotReadableError, UnknownEnvError
 
@@ -401,13 +402,6 @@ class ScienceFitsFile(object):
         string = self.img_header['CAPTURE']
         return iuvs_utc_to_dtime(string)
 
-    # pylint: disable=no-self-use
-    @property
-    def n_darks(self):
-        "To be overwritten by daughter class!"
-        return None
-    # pylint: enable=no-self-use
-
     @property
     def integration_times(self):
         "Convert times from Integration table to pandas TimeSeries"
@@ -425,6 +419,13 @@ class ScienceFitsFile(object):
         else:
             spec = data
         return spec
+
+    def get_n_data_attr(self, data_attr):
+        data = getattr(self, data_attr)
+        if data.ndim == 3:
+            return data.shape[0]
+        else:
+            return 1
 
     def plot_some_spectrogram(self, inspec, title, ax=None, cmap=None,
                               cbar=True, log=False, showaxis=True,
@@ -455,7 +456,7 @@ class ScienceFitsFile(object):
             im = ax.imshow(spec, cmap=cmap, vmin=vmin, vmax=vmax,
                            aspect='auto', **kwargs)
 
-        do_labels(self, ax, title=title, set_extent=set_extent)
+        do_labels(ax, title=title, set_extent=set_extent)
 
         if not showaxis:
             ax.grid('off')
@@ -485,10 +486,7 @@ class ScienceFitsFile(object):
         plot_hist = kwargs.pop('plot_hist', False)
         savename = kwargs.pop('savename', False)
         spec = self.get_integration(data_attr, integration)
-        if 'dark' in data_attr:
-            nints = self.n_darks
-        else:
-            nints = self.n_integrations
+        nints = self.get_n_data_attr(data_attr)
         if scale:
             spec = spec / self.scaling_factor
         if spatial is None:
@@ -550,6 +548,7 @@ class ScienceFitsFile(object):
 
     def plot_img_profile(self, integration=None, ax=None, log=True,
                          **kwargs):
+
         return self.plot_some_profile('img', integration, ax=ax,
                                       **kwargs)
 
@@ -702,7 +701,7 @@ class L1BReader(ScienceFitsFile):
                               spatial=spatial, plot_hist=prof_plot_hist)
 
         # colorbar
-        im = ax.get_images()[0]
+        im = ax.get_images()[0]  # pylint: disable=no-member
         fig.tight_layout()
         fig.subplots_adjust(top=0.9, bottom=0.1)
         # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
@@ -719,8 +718,6 @@ class L1BReader(ScienceFitsFile):
             fname = "{}_{}.png".format(self.plotfname,
                                        save_token)
             fig.savefig(os.path.join(str(plotfolder), fname), dpi=150)
-
-        return fig
 
     def plot_mean_values(self, item):
         fig, ax = plt.subplots()
@@ -765,19 +762,17 @@ class L1BReader(ScienceFitsFile):
         self.spa_slice, self.spe_slice = find_scaling_window(spec)
         return self.spa_slice, self.spe_slice
 
-    def plot_raw_profile(self, integration=None, ax=None, log=None,
+    def plot_raw_profile(self, integration=-1, ax=None, log=None,
                          spatial=None, **kwargs):
-        if integration is None:
-            integration = -1
         return self.plot_some_profile('raw_dn_s', integration,
                                       ax=ax, log=log, spatial=spatial,
                                       **kwargs)
 
-    def plot_dark_profile(self, integration, ax=None, log=None):
+    def plot_dark_profile(self, integration=-1, ax=None, log=None):
         return self.plot_some_profile('dark_dn_s', integration,
                                       ax=ax, log=log)
 
-    def plot_dds_profile(self, integration, ax=None, log=None):
+    def plot_dds_profile(self, integration=-1, ax=None, log=None):
         return self.plot_some_profile('dds_dn_s', integration,
                                       ax=ax, log=log)
 
@@ -892,9 +887,9 @@ def some_file(level, pattern):
     return fname
 
 
-def some_l1a(pattern=''):
+def some_l1a(pattern=None):
     return L1AReader(some_file('l1a', pattern))
 
 
-def some_l1b(pattern=''):
+def some_l1b(pattern=None):
     return L1BReader(some_file('l1b', pattern))
