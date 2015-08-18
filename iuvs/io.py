@@ -399,13 +399,6 @@ class ScienceFitsFile(object):
         string = self.img_header['CAPTURE']
         return iuvs_utc_to_dtime(string)
 
-    # pylint: disable=no-self-use
-    @property
-    def n_darks(self):
-        "To be overwritten by daughter class!"
-        return None
-    # pylint: enable=no-self-use
-
     @property
     def integration_times(self):
         "Convert times from Integration table to pandas TimeSeries"
