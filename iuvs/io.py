@@ -1,7 +1,6 @@
 import datetime as dt
 import os
 import socket
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,6 +8,7 @@ import pandas as pd
 from astropy.io import fits
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from pathlib import Path
 from scipy.ndimage.filters import generic_filter
 
 from .exceptions import DimensionsError, PathNotReadableError, UnknownEnvError
@@ -116,9 +116,9 @@ def image_stats(data):
     return pd.Series(data.ravel()).describe()
 
 
-def get_filename_stats(level, env='stage'):
+def get_filename_stats(level, env='stage', pattern=None):
     if level != 'hk':
-        fnames = get_filenames(level, env=env, pattern=None)
+        fnames = get_filenames(level, env=env, pattern=pattern)
         Filename = ScienceFilename
     else:
         fnames = get_hk_filenames(env=env)
@@ -146,7 +146,7 @@ def get_current_hk_fnames(env='stage'):
 
 
 def get_current_science_fnames(level, pattern=None, env='stage'):
-    df = get_filename_stats(level, env=env)
+    df = get_filename_stats(level, pattern=pattern, env=env)
     return df.groupby('obs_id')['basename'].max()
 
 
@@ -186,6 +186,9 @@ class Filename(object):
         self.basename = os.path.basename(fname)
         self.tokens = self.basename.split('_')
         self.mission, self.instrument = self.tokens[:2]
+
+    def as_series(self):
+        return pd.Series(self.__dict__)
 
 
 class ScienceFilename(Filename):
