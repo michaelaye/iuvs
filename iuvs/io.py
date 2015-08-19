@@ -38,6 +38,17 @@ mycmap = 'cubehelix'
 plotfolder = HOME / 'plots'
 outputfolder = HOME / 'output'
 
+sys_byteorder = ('>', '<')[sys.byteorder == 'little']
+
+
+def convert_big_endian(data):
+    try:
+        if data.dtype.byteorder not in ('=', sys_byteorder):
+            data = data.byteswap().newbyteorder(sys_byteorder)
+    except AttributeError:  # when it's boolean e.g.
+        pass
+    return data
+
 
 def get_hk_filenames(env='stage', iterator=True):
     if env == 'production':
@@ -117,7 +128,7 @@ def image_stats(data):
     return pd.Series(data.ravel()).describe()
 
 
-def get_filename_stats(level, env='stage', pattern=None):
+def get_filename_df(level, env='stage', pattern=None):
     if level != 'hk':
         fnames = get_filenames(level, env=env, pattern=pattern)
         Filename = ScienceFilename
@@ -127,11 +138,7 @@ def get_filename_stats(level, env='stage', pattern=None):
     iuvs_fnames = []
     for fname in fnames:
         iuvs_fnames.append(Filename(fname))
-    s = pd.Series(iuvs_fnames)
-    df = pd.DataFrame()
-    keys = [i for i in dir(iuvs_fnames[0]) if not i.startswith('_')]
-    for key in keys:
-        df[key] = s.map(lambda x: getattr(x, key))
+    df = pd.DataFrame([fname.as_series() for fname in iuvs_fnames])
     if level != 'hk':
         df['channel'] = df.channel.astype('category')
         df.set_index('time', inplace=True)
@@ -142,13 +149,13 @@ def get_filename_stats(level, env='stage', pattern=None):
 
 
 def get_current_hk_fnames(env='stage'):
-    df = get_filename_stats('hk', env=env)
+    df = get_filename_df('hk', env=env)
     return df.groupby('obs_id')['p'].max()
 
 
 def get_current_science_fnames(level, pattern=None, env='stage'):
-    df = get_filename_stats(level, pattern=pattern, env=env)
-    return df.groupby('obs_id')['basename'].max()
+    df = get_filename_df(level, pattern=pattern, env=env)
+    return df.groupby('obs_id')['p'].max()
 
 
 def get_header_df(hdu, drop_comment=True):
@@ -159,9 +166,14 @@ def get_header_df(hdu, drop_comment=True):
     """
     hdu.verify('silentfix')
     header = hdu.header
-    df = pd.Series(header.values(),
-                   index=header.keys())
-    return df.drop('COMMENT KERNEL'.split()) if drop_comment else df
+    d = {}
+    for key in set(header.keys()):
+        if drop_comment and key == 'COMMENT':
+            continue
+        data = header[key]
+        d[key] = convert_big_endian(data)
+    df = pd.DataFrame(d, index=[0])
+    return df.drop('COMMENT KERNEL'.split(), axis=1, errors='ignore') if drop_comment else df
 
 
 def save_to_hdf(df, fname, output_subdir=None):
@@ -332,8 +344,12 @@ class ScienceFitsFile(object):
         if type(fname) == list:
             fname = fname[0]
         self.fname = fname
-        self.iuvsfname = Filename(fname)
-        self.hdulist = fits.open(fname)
+        try:
+            self.iuvsfname = Filename(fname)
+        except AttributeError:
+            self.p = fname
+            self.fname = str(fname)
+        self.hdulist = fits.open(self.fname)
 
     @property
     def n_dims(self):
@@ -356,7 +372,7 @@ class ScienceFitsFile(object):
 
     @property
     def primary_img_dn_s(self):
-        return (self.img / self.scaling_factor) + 0.001
+        return (self.img / self.scaling_factor) + 0.00001
 
     @property
     def spatial_size(self):
@@ -554,6 +570,14 @@ class ScienceFitsFile(object):
 
     def image_stats(self):
         return image_stats(self.img)
+
+
+def fits_table_to_dataframe(hdu):
+    d = {}
+    for col in hdu.columns:
+        data = hdu.data[col.name]
+        d[col.name] = convert_big_endian(data)
+    return pd.DataFrame(d)
 
 
 class L1AReader(ScienceFitsFile):
