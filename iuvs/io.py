@@ -590,21 +590,23 @@ class L1AReader(ScienceFitsFile):
     ]
 
     def __init__(self, fname, stage=True):
+        try:
+            # call super init
+            super(L1AReader, self).__init__(fname)
+        except:
+            # fix relative paths
+            if not os.path.isabs(fname):
+                if stage:
+                    fname = str(stagelevel1apath / fname)
+                else:
+                    fname = str(productionlevel1apath / fname)
+            super(L1AReader, self).__init__(fname)
 
-        # fix relative paths
-        if not os.path.isabs(fname):
-            if stage:
-                fname = str(stagelevel1apath / fname)
-            else:
-                fname = str(productionlevel1apath / fname)
-
-        # call super init
-        super(L1AReader, self).__init__(fname)
         for hdu in self.hdulist[1:]:
             name = hdu.header['EXTNAME']
             setattr(self, name + '_header', hdu.header)
             if name in self.works_with_dataframes:
-                setattr(self, name, pd.DataFrame(hdu.data))
+                setattr(self, name, fits_table_to_dataframe(hdu))
             else:
                 setattr(self, name, hdu.data)
         # check for error case with binning table not found:
