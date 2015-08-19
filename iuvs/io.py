@@ -613,6 +613,28 @@ class L1AReader(ScienceFitsFile):
         if self.n_dims == 2 and self.n_integrations > 1:
             raise DimensionsError('n_dims == 2 with n_integrations > 1')
 
+    def get_real_binnings(self, dim):
+        binning = getattr(self, 'Binning')
+        widths = binning[dim+'BINWIDTH'][0]
+        transmits = binning[dim+'BINTRANSMIT'][0].astype(bool)
+        return widths[transmits]
+
+    @property
+    def spabins(self):
+        return self.get_real_binnings('SPA')
+
+    @property
+    def n_unique_spabins(self):
+        return len(set(self.spabins))
+
+    @property
+    def spebins(self):
+        return self.get_real_binnings('SPE')
+
+    @property
+    def n_unique_spebins(self):
+        return len(set(self.spebins))
+
 
 class L1BReader(ScienceFitsFile):
 
