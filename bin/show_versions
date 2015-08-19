@@ -7,7 +7,7 @@ from iuvs import io
 
 
 def get_version_string_from_fname(fname):
-    iuvsfname = io.Filename(fname)
+    iuvsfname = io.ScienceFilename(fname)
     return iuvsfname.version + iuvsfname.revision
 
 
