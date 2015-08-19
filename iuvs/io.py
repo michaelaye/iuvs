@@ -1,16 +1,16 @@
 import datetime as dt
 import os
 import socket
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from astropy.io import fits
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from pathlib import Path
 from scipy.ndimage.filters import generic_filter
-
-from astropy.io import fits
 
 from .exceptions import DimensionsError, PathNotReadableError, UnknownEnvError
 
