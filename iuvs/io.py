@@ -630,25 +630,46 @@ class L1AReader(ScienceFitsFile):
 
     def get_real_binnings(self, dim):
         binning = getattr(self, 'Binning')
-        widths = binning[dim+'BINWIDTH'][0]
-        transmits = binning[dim+'BINTRANSMIT'][0].astype(bool)
+        widths = binning[dim + 'BINWIDTH']
+        transmits = binning[dim + 'BINTRANSMIT'].astype(bool)
         return widths[transmits]
 
     @property
     def spabins(self):
-        return self.get_real_binnings('SPA')
+        return self.get_real_binnings('SPA')[:, np.newaxis]
 
     @property
     def n_unique_spabins(self):
-        return len(set(self.spabins))
+        return np.unique(self.spabins).size
 
     @property
     def spebins(self):
-        return self.get_real_binnings('SPE')
+        return self.get_real_binnings('SPE')[np.newaxis, :]
 
     @property
     def n_unique_spebins(self):
-        return len(set(self.spebins))
+        return np.unique(self.spebins).size
+
+    @property
+    def scaling_factor(self):
+        """Return factor to get DN/s.
+
+        Because the binning returns just summed up values, one must
+        also include the binning as a scaling factor, not only the
+        integration time.
+        """
+        bin_scale = self.spabins * self.spebins
+        return bin_scale * self.int_time
+
+    def __repr__(self):
+        s = "Filename: {}\n".format(self.p.name)
+        s += "Environment: {}\n".format(self.env)
+        s += "NAXIS : {}\nNAXIS1 : {}\nNAXIS2 : {}\nNAXIS3 : {}"\
+            .format(self.img_header['NAXIS'],
+                    self.img_header['NAXIS1'],
+                    self.img_header['NAXIS2'],
+                    self.img_header['NAXIS3'])
+        return s
 
 
 class L1BReader(ScienceFitsFile):
