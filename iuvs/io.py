@@ -163,6 +163,14 @@ def get_header_df(hdu, drop_comment=True):
 
     And on the way:
     fix it,drop COMMENT and KERNEL
+
+    Parameters
+    ----------
+    hdu : FITS header unit
+        The HDU to extract a header dataframe from
+    drop_comment : bool
+        To control if the comment and kernel lines from the header should be dropped.
+        Default: True. No errors are raised when those fields do not exist.
     """
     hdu.verify('silentfix')
     header = hdu.header
@@ -177,16 +185,28 @@ def get_header_df(hdu, drop_comment=True):
 
 
 def save_to_hdf(df, fname, output_subdir=None):
-    """Save temporary HDF file in output folder for later concatenation."""
-    if os.path.isabs(fname):
-        basename = os.path.basename(fname)
-    else:
-        basename = fname
-    newfname = os.path.splitext(basename)[0] + '.h5'
-    path = HOME / 'output'
+    """Save temporary HDF file in output folder for later concatenation.
+
+    By default the product is stored in HOME/output.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to save
+    fname : string
+        The product filename that was used to create this dataframe to save.
+        The saving filename for the HDF file will be auto-determined from that.
+    output_subdir : str
+        String to determine a subfolder inside HOME/output where this data
+        should be stored instead of just HOME/output
+
+    """
+    path = Path(fname)
+    newfname = path.with_suffix('.h5').name
+    folderpath = HOME / 'output'
     if output_subdir:
-        path = path / output_subdir
-    path = path / newfname
+        folderpath = folderpath / output_subdir
+    path = folderpath / newfname
     df.to_hdf(str(path), 'df', format='t')
     return str(path)
 
