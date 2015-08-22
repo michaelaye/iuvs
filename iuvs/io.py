@@ -364,11 +364,7 @@ class ScienceFitsFile(object):
         if type(fname) == list:
             fname = fname[0]
         self.fname = fname
-        try:
-            self.iuvsfname = Filename(fname)
-        except AttributeError:
-            self.p = fname
-            self.fname = str(fname)
+        self.iuvsfname = Filename(fname)
         self.hdulist = fits.open(self.fname)
 
     @property
@@ -609,18 +605,17 @@ class L1AReader(ScienceFitsFile):
         'Engineering',
     ]
 
-    def __init__(self, fname, stage=True):
-        try:
-            # call super init
-            super(L1AReader, self).__init__(fname)
-        except:
-            # fix relative paths
-            if not os.path.isabs(fname):
-                if stage:
-                    fname = str(stagelevel1apath / fname)
-                else:
-                    fname = str(productionlevel1apath / fname)
-            super(L1AReader, self).__init__(fname)
+    def __init__(self, fname, env='production'):
+        # fix relative paths
+        self.env = env
+        if not Path(fname).is_absolute():
+            if env == 'stage':
+                fname = stagelevel1apath / Path(fname)
+            else:
+                fname = productionlevel1apath / Path(fname)
+        self.p = fname
+        # call super init
+        super(L1AReader, self).__init__(str(fname))
 
         for hdu in self.hdulist[1:]:
             name = hdu.header['EXTNAME']
