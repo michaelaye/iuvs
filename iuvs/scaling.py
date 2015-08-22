@@ -62,6 +62,10 @@ class DarkScaler(object):
         "Overwrite in daughter class!"
         pass
 
+    def expected(self):
+        "Overwrite in daughter class."
+        pass
+
     @property
     def scaled(self):
         return self.model(self.data_in, self.p)
@@ -127,7 +131,9 @@ class MultScaler(DarkScaler):
     name = 'MultScaler'
     rank = 0
 
-    def model(self, x, a):
+    def model(self, x=None, a=None):
+        x = self.x if x is None else x
+        a = self.a if a is None else a
         return a * x
 
     def expected(self):
