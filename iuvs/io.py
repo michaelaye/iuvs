@@ -661,6 +661,15 @@ class L1AReader(ScienceFitsFile):
         bin_scale = self.spabins * self.spebins
         return bin_scale * self.int_time
 
+    def plot_spectrogram(self, integration=None, ax=None,
+                         cmap=None, cbar=True, log=False,
+                         **kwargs):
+        spec = self.get_integration('primary_img_dn_s', integration)
+        title = ("Spectogram, integration {} out of {}"
+                 .format(integration, self.n_integrations))
+        return self.plot_some_spectrogram(spec, title, ax,
+                                          cmap, cbar, log, **kwargs)
+
     def __repr__(self):
         s = "Filename: {}\n".format(self.p.name)
         s += "Environment: {}\n".format(self.env)
