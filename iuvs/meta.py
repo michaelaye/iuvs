@@ -60,26 +60,15 @@ def clean_up_dark_scan(df):
     df.UTC = df.UTC.map(io.iuvs_utc_to_dtime)
     df = df.rename(columns=lambda x: 'TIME_OF_INT' if x == 'UTC' else x)
 
-    # remove rows with missing binning data
-    df = df[~df.SPA_OFS.isnull()]
-
     # remove XUV as it's same as CHANNEL
     df = df.drop(['XUV'], axis=1)
 
     # remove PRODUCT_CREATION_DATE as it's same as PROCESS
     df = df.drop(['PRODUCT_CREATION_DATE'], axis=1)
 
-    # having PRODUCT_ID i don't really filename
-    df = df.drop(['FILENAME'], axis=1)
+    # create binning tuple
+    df['BINNING_SET'] = tuple(zip(df['SPE_OFS'], df['SPE_SIZE'], df['SPA_OFS'], df['SPA_SIZE']))
 
-    # combine binning data into tuple
-    def combine_binning_data(row):
-        return tuple(int(row[col]) for col in
-                     ['SPE_OFS', 'SPE_SIZE', 'SPA_OFS', 'SPA_SIZE'])
-
-    df.set_index('TIME_OF_INT', inplace=True)
-    df['BINNING_SET'] = df.apply(combine_binning_data, axis=1)
     df = df.drop('spe_size spe_ofs spa_size spa_ofs'.upper().split(), axis=1)
 
-    df.sort_index(inplace=True)
     return df
