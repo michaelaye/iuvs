@@ -367,13 +367,27 @@ class ScienceFitsFile(object):
         self.iuvsfname = Filename(fname)
         self.hdulist = fits.open(self.fname)
 
-    @property
-    def n_dims(self):
-        return self.img_header['NAXIS']
+    def get_real_binnings(self, dim):
+        binning = getattr(self, 'Binning')
+        widths = binning[dim+'BINWIDTH']
+        transmits = binning[dim+'BINTRANSMIT'].astype(bool)
+        return widths[transmits]
 
     @property
-    def n_integrations(self):
-        return int(getattr(self, 'Engineering').get_value(0, 'NUMBER'))
+    def spabins(self):
+        return self.get_real_binnings('SPA')[:, np.newaxis]
+
+    @property
+    def n_unique_spabins(self):
+        return np.unique(self.spabins).size
+
+    @property
+    def spebins(self):
+        return self.get_real_binnings('SPE')[np.newaxis, :]
+
+    @property
+    def n_unique_spebins(self):
+        return np.unique(self.spebins).size
 
     @property
     def scaling_factor(self):
@@ -383,8 +397,25 @@ class ScienceFitsFile(object):
         also include the binning as a scaling factor, not only the
         integration time.
         """
-        bin_scale = self.img_header['SPA_SIZE'] * self.img_header['SPE_SIZE']
+        bin_scale = self.spabins * self.spebins
         return bin_scale * self.int_time
+
+    def __repr__(self):
+        s = "Filename: {}\n".format(self.p.name)
+        s += "Environment: {}\n".format(self.env)
+        s += "NAXIS : {}\nNAXIS1 : {}\nNAXIS2 : {}\nNAXIS3 : {}".format(self.img_header['NAXIS'],
+                                                                        self.img_header['NAXIS1'],
+                                                                        self.img_header['NAXIS2'],
+                                                                        self.img_header['NAXIS3'])
+        return s
+
+    @property
+    def n_dims(self):
+        return self.img_header['NAXIS']
+
+    @property
+    def n_integrations(self):
+        return int(getattr(self, 'Engineering').get_value(0, 'NUMBER'))
 
     @property
     def primary_img_dn_s(self):
@@ -613,6 +644,8 @@ class L1AReader(ScienceFitsFile):
                 fname = stagelevel1apath / Path(fname)
             else:
                 fname = productionlevel1apath / Path(fname)
+        if fname.suffix == '.fits' or fname.suffix == '':
+            fname = fname.with_suffix('.fits.gz')
         self.p = fname
         # call super init
         super(L1AReader, self).__init__(str(fname))
@@ -627,58 +660,6 @@ class L1AReader(ScienceFitsFile):
         # check for error case with binning table not found:
         if self.n_dims == 2 and self.n_integrations > 1:
             raise DimensionsError('n_dims == 2 with n_integrations > 1')
-
-    def get_real_binnings(self, dim):
-        binning = getattr(self, 'Binning')
-        widths = binning[dim + 'BINWIDTH']
-        transmits = binning[dim + 'BINTRANSMIT'].astype(bool)
-        return widths[transmits]
-
-    @property
-    def spabins(self):
-        return self.get_real_binnings('SPA')[:, np.newaxis]
-
-    @property
-    def n_unique_spabins(self):
-        return np.unique(self.spabins).size
-
-    @property
-    def spebins(self):
-        return self.get_real_binnings('SPE')[np.newaxis, :]
-
-    @property
-    def n_unique_spebins(self):
-        return np.unique(self.spebins).size
-
-    @property
-    def scaling_factor(self):
-        """Return factor to get DN/s.
-
-        Because the binning returns just summed up values, one must
-        also include the binning as a scaling factor, not only the
-        integration time.
-        """
-        bin_scale = self.spabins * self.spebins
-        return bin_scale * self.int_time
-
-    def plot_spectrogram(self, integration=None, ax=None,
-                         cmap=None, cbar=True, log=False,
-                         **kwargs):
-        spec = self.get_integration('primary_img_dn_s', integration)
-        title = ("Spectogram, integration {} out of {}"
-                 .format(integration, self.n_integrations))
-        return self.plot_some_spectrogram(spec, title, ax,
-                                          cmap, cbar, log, **kwargs)
-
-    def __repr__(self):
-        s = "Filename: {}\n".format(self.p.name)
-        s += "Environment: {}\n".format(self.env)
-        s += "NAXIS : {}\nNAXIS1 : {}\nNAXIS2 : {}\nNAXIS3 : {}"\
-            .format(self.img_header['NAXIS'],
-                    self.img_header['NAXIS1'],
-                    self.img_header['NAXIS2'],
-                    self.img_header['NAXIS3'])
-        return s
 
 
 class L1BReader(ScienceFitsFile):
