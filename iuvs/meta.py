@@ -71,4 +71,10 @@ def clean_up_dark_scan(df):
 
     df = df.drop('spe_size spe_ofs spa_size spa_ofs'.upper().split(), axis=1)
 
+    df['INT_TIME'] = (df.INT_TIME*1000).astype('int')
+    df.set_index("TIME_OF_INT", inplace=True)
+    df.sort_index(inplace=True)
+    s = df.PRODUCT_ID.str.split('_')
+    s = s.map(lambda x: x[3]).str.split('-')
+    df['activity'] = s.map(lambda x: x[0])
     return df
