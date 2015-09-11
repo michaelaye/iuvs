@@ -14,6 +14,7 @@ before_install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda update --yes conda
+  - pip install codecov
 
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION --file requirements.txt
@@ -33,6 +34,7 @@ script:
 
 after_success:
   - coveralls
+  - codecov
 
 notifications:
   slack: iuvs:LiU7zTHNsZxNMjXkKndLEGQc
