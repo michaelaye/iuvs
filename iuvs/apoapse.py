@@ -93,7 +93,7 @@ def process_fnames(fnames, wavelength):
     return df
 
 
-def process_day(daystring, wavelength):
+def process_day(daystring, wavelength, channel='muv'):
     """process day of apoapse data
 
     Parameters
@@ -106,7 +106,11 @@ def process_day(daystring, wavelength):
     pd.DataFrame
         Also saving the dataframe in ~/to_keep/apoapse
     """
-    globstr = "apoapse*-muv_{}".format(daystring)
+    globstr = "apoapse*-{}_{}T".format(channel, daystring)
     fnames = io.l1b_filenames(globstr)
     df = process_fnames(fnames, wavelength)
-    df.to_hdf()
+    savename = "{}_{}_{}.h5".format(channel, daystring, wavelength)
+    path = str(io.analysis_out / 'apoapse' / savename)
+    df.to_hdf(path, 'df')
+    print('Created {}.'.format(path))
+    return df
