@@ -21,10 +21,11 @@ HOME = home
 if host.startswith('maven-iuvs-itf'):
     stage = Path('/maven_iuvs/stage/products')
     production = Path('/maven_iuvs/production/products')
+    analysis_out = home / 'to_keep'
 else:
     stage = home / 'data' / 'iuvs'
     production = stage
-
+    analysis_out = home / 'data' / 'iuvs' / 'to_keep'
 stagelevel1apath = stage / 'level1a'
 stagelevel1bpath = stage / 'level1b'
 stagelevel0path = stage / 'level0'
@@ -875,6 +876,44 @@ class L1BReader(ScienceFitsFile):
         axes.set_title("{}\nSpatial mean profiles of darks."
                        .format(self.plottitle),
                        fontsize=14)
+
+    def plot_spectrum(self, data, integration, spatial=None, ax=None, scale=False,
+                      log=False, spa_average=False, title=None,
+                      **kwargs):
+        savename = kwargs.pop('savename', False)
+        spec = data[integration]
+        if spatial is None:
+            # if no spatial bin given, take the middle one
+            spatial = self.spatial_size // 2
+
+        if ax is None:
+            fig, ax = plt.subplots()
+            fig.suptitle(self.plottitle, fontsize=12)
+        if log:
+            func = ax.semilogy
+        else:
+            func = ax.plot
+
+        if spa_average:
+            data = spec.mean(axis=0)
+        else:
+            data = spec[spatial]
+
+        func(self.wavelengths[spatial], data, **kwargs)
+
+        ax.set_xlim((self.wavelengths[spatial][0],
+                     self.wavelengths[spatial][-1]))
+        ax.set_title(title, fontsize=11)
+        ax.set_xlabel("Wavelength [nm]")
+        if log:
+            ax.set_ylabel("log(DN/s)")
+        else:
+            ax.set_ylabel('DN/s')
+
+        if savename:
+            ax.get_figure().savefig(savename, dpi=100)
+
+        return ax
 
 
 def get_rectangle(spectogram):

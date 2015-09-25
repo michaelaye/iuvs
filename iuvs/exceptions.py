@@ -22,3 +22,13 @@ class PathNotReadableError(IUVSError):
 
     def __str__(self):
         return ("Provided path not readable:\n{}".format(self.path))
+
+
+class ApoapseNonUniqueSpectralPixel(IUVSError):
+
+    def __init__(self, idx):
+        self.idx = idx
+
+    def __str__(self):
+        return ("Indices for given wavelength are different for different pixel: {}"
+                .format(self.idx))
