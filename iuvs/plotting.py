@@ -109,7 +109,7 @@ def raw_violins(l1b):
 
 #     tohist = img[:, :50]
 #     tohist = tohist[tohist < p99]
-#     # tohist = tohist[tohist > lowhist]
+# tohist = tohist[tohist > lowhist]
 #     trace4 = Histogram(x=tohist.ravel(),
 #                        name='image histogram',
 #                        xaxis='x4',
@@ -141,7 +141,9 @@ def raw_violins(l1b):
 
 
 class L1BImageOperator(object):
+
     """Execute string based operations on contained images"""
+
     def __init__(self, l1b):
         super(L1BImageOperator, self).__init__()
         self.l1b = l1b
