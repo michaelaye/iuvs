@@ -243,7 +243,7 @@ class DarkFitter(object):
                PolyScaler2]
 
     def __init__(self, fname_or_l1b, raw_integration, dark_integration,
-                 spa_slice=None, spe_slice=None):
+                 spa_slice=None, spe_slice=None, dn_s=True):
         if hasattr(fname_or_l1b, 'fname'):  # only true if it is type(L1BReader)
             self.l1b = fname_or_l1b
             l1b = fname_or_l1b
@@ -255,8 +255,12 @@ class DarkFitter(object):
         self.raw_integration = raw_integration
         self.dark_integration = dark_integration
 
-        fullraw = l1b.get_integration('raw_dn_s', raw_integration)
-        fulldark = l1b.get_integration('dark_dn_s', dark_integration)
+        if dn_s is True:
+            fullraw = l1b.get_integration('raw_dn_s', raw_integration)
+            fulldark = l1b.get_integration('dark_dn_s', dark_integration)
+        else:
+            fullraw = l1b.get_integration('detector_raw', raw_integration)
+            fulldark = l1b.get_integration('detector_dark', dark_integration)
         self.fullraw = fullraw
         self.fulldark = fulldark
 
