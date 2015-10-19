@@ -50,6 +50,7 @@ class Apoapse(object):
         # the all(...) term refers to the fact that I want all 5 coords
         # (corners & center) to be on-disk to be chosen.
         selector = self.p_alts.apply(lambda x: all(~(x > 0)), axis=2)
+        self.selector = selector
 
         # values.ravel to go back to 1D numpy arrays
         self.lats = self.p_lats[selector].values.ravel()
@@ -86,14 +87,16 @@ def process_fnames(fnames, wavelength):
         lons.append(apo.lons[idx])
         data.append(apo.data[idx])
 
-    df = pd.DataFrame({'lats': np.concatenate(lats),
-                       'lons': np.concatenate(lons),
-                       'data': np.concatenate(data)})
-
+    try:
+        df = pd.DataFrame({'lats': np.concatenate(lats),
+                           'lons': np.concatenate(lons),
+                           'data': np.concatenate(data)})
+    except ValueError:
+        return None
     return df
 
 
-def process_day(daystring, wavelength):
+def process_day(daystring, wavelength, channel='muv'):
     """process day of apoapse data
 
     Parameters
@@ -106,7 +109,16 @@ def process_day(daystring, wavelength):
     pd.DataFrame
         Also saving the dataframe in ~/to_keep/apoapse
     """
-    globstr = "apoapse*-muv_{}".format(daystring)
-    fnames = io.l1b_filenames(globstr)
+    globstr = "apoapse*-{}_{}T".format(channel, daystring)
+    fnames = io.l1b_filenames(globstr, env='production')
     df = process_fnames(fnames, wavelength)
-    df.to_hdf()
+    savename = "{}_{}_{}.h5".format(channel, daystring, wavelength)
+    path = str(io.analysis_out / 'apoapse' / savename)
+    df.to_hdf(path, 'df')
+    print('Created {}.'.format(path))
+    return df
+
+
+def process_days(list_of_days, wavelength, channel='muv'):
+    for day in list_of_days:
+        process_day(day, wavelength, channel)

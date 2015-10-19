@@ -80,7 +80,6 @@ def get_filenames(level, pattern=None, env='stage', ext='.fits.gz',
     else:
         pattern = '*' + pattern + '*'
     path = get_data_path(level, env)
-    print(path)
     result = map(str, path.glob(pattern + ext))
     return result if iterator else list(result)
 
