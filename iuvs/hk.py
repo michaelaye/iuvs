@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import SpiceyPy as spice
+import spiceypy as spice
 from astropy.io import fits
 
 
