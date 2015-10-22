@@ -144,7 +144,7 @@ def get_filename_df(level, env='stage', pattern=None):
         df.set_index('time', inplace=True)
         df.sort_index(inplace=True)
     else:
-        df.sort('datestring')
+        df.sort_values(by='datestring')
     return df
 
 
