@@ -2,6 +2,7 @@ import datetime as dt
 import os
 import socket
 import sys
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -403,10 +404,9 @@ class ScienceFitsFile(object):
     def __repr__(self):
         s = "Filename: {}\n".format(self.p.name)
         s += "Environment: {}\n".format(self.env)
-        s += "NAXIS : {}\nNAXIS1 : {}\nNAXIS2 : {}\nNAXIS3 : {}".format(self.img_header['NAXIS'],
-                                                                        self.img_header['NAXIS1'],
-                                                                        self.img_header['NAXIS2'],
-                                                                        self.img_header['NAXIS3'])
+        s += "n_dims: {}\n".format(self.n_dims)
+        s += "spatial: {}\n".format(self.spatial_size)
+        s += "spectral: {}".format(self.spectral_size)
         return s
 
     @property
@@ -639,24 +639,29 @@ class L1AReader(ScienceFitsFile):
     def __init__(self, fname, env='production'):
         # fix relative paths
         self.env = env
-        if not Path(fname).is_absolute():
+        fname = Path(fname)
+        if not fname.is_absolute():
             if env == 'stage':
-                fname = stagelevel1apath / Path(fname)
+                fname = stagelevel1apath / fname
             else:
-                fname = productionlevel1apath / Path(fname)
-        if fname.suffix == '.fits' or fname.suffix == '':
-            fname = fname.with_suffix('.fits.gz')
+                fname = productionlevel1apath / fname
         self.p = fname
         # call super init
         super(L1AReader, self).__init__(str(fname))
 
-        for hdu in self.hdulist[1:]:
-            name = hdu.header['EXTNAME']
-            setattr(self, name + '_header', hdu.header)
-            if name in self.works_with_dataframes:
-                setattr(self, name, fits_table_to_dataframe(hdu))
-            else:
-                setattr(self, name, hdu.data)
+        if self.spectral_size == 1024 and self.spatial_size == 1024:
+            warnings.warn("\nNot loading HDU data due to performance issue.\n"
+                          "Identified with 'Observation' HDU so far, working with other\n"
+                          "data should be fine.")
+        else:
+            for hdu in self.hdulist[1:]:
+                name = hdu.header['EXTNAME']
+                setattr(self, name + '_header', hdu.header)
+
+                if name in self.works_with_dataframes:
+                    setattr(self, name, fits_table_to_dataframe(hdu))
+                else:
+                    setattr(self, name, hdu.data)
         # check for error case with binning table not found:
         if self.n_dims == 2 and self.n_integrations > 1:
             raise DimensionsError('n_dims == 2 with n_integrations > 1')
