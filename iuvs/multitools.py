@@ -2,7 +2,7 @@ import sys
 import time
 
 from IPython.display import display
-from IPython.html.widgets import FloatProgress, IntProgress
+from ipywidgets import FloatProgress, IntProgress
 from numpy import linspace
 
 
