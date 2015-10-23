@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import SpiceyPy as spice
+import spiceypy as spice
 
 
 def load_kernels():
