@@ -19,22 +19,38 @@ host = socket.gethostname()
 home = Path(os.environ['HOME'])
 HOME = home
 
+
+def env_path(env):
+    """Return root path depending on `env`.
+
+    Parameters
+    ----------
+    env : {'stage', 'production'}
+
+    Returns
+    -------
+    path
+        pathilb.Path
+    """
+    host = socket.gethostname()
+    if host.startswith('maven-iuvs-itf'):
+        path = Path('/maven_iuvs/{}/products'.format(env))
+    elif host.startswith('test-machine'):
+        path = Path('/abc')
+    else:
+        path = Path(os.environ['HOME']) / 'data' / 'iuvs'
+    return path
+
 if host.startswith('maven-iuvs-itf'):
-    stage = Path('/maven_iuvs/stage/products')
-    production = Path('/maven_iuvs/production/products')
     analysis_out = home / 'to_keep'
 else:
-    stage = home / 'data' / 'iuvs'
-    production = stage
     analysis_out = home / 'data' / 'iuvs' / 'to_keep'
-stagelevel1apath = stage / 'level1a'
-stagelevel1bpath = stage / 'level1b'
-stagelevel0path = stage / 'level0'
-stagehkpath = stage / 'housekeeping' / 'level1a'
+stagelevel1apath = env_path('stage') / 'level1a'
+stagelevel1bpath = env_path('stage') / 'level1b'
+stagelevel0path = env_path('stage') / 'level0'
 productionlevel1apath = production / 'level1a'
 productionlevel1bpath = production / 'level1b'
 productionlevel0path = production / 'level0'
-productionhkpath = production / 'housekeeping' / 'level1a'
 
 mycmap = 'cubehelix'
 plotfolder = HOME / 'plots'
@@ -52,35 +68,56 @@ def convert_big_endian(data):
     return data
 
 
-def get_hk_filenames(env='stage', iterator=True):
-    if env == 'production':
-        if os.access(str(productionhkpath), os.R_OK):
-            path = productionhkpath
-        else:
-            raise PathNotReadableError(productionhkpath)
-    elif env == 'stage':
-        path = stagehkpath
-    else:
-        raise UnknownEnvError(env)
-    result = map(str, path.glob('*'))
-    return result if iterator else list(result)
-
-
 def get_data_path(level, env='stage'):
-    levelstring = dict(l0='level0', l1a='level1a', l1b='level1b')
-    if env == 'stage':
-        return stage / levelstring[level]
-    elif env == 'production':
-        return production / levelstring[level]
+    """Return data path for given `level`.
+
+    Some shortcuts for making interactive analysis faster.
+
+    Parameters
+    ----------
+    level : {'l0', 'l1a', 'l1b', 'hk'}
+        shorter string key to look up the longer subdir's names.
+    }
+    env : {'stage', 'production'}, optional
+        Switch to decide between production or staging environment.
+        Default: stage.
+    """
+    levelstring = dict(l0='level0', l1a='level1a', l1b='level1b',
+                       hk='housekeeping/level1a')
+    path = env_path(env) / levelstring[level]
+    return path
 
 
 def get_filenames(level, pattern=None, env='stage', ext='.fits.gz',
                   iterator=True):
+    """return iterator (default) or list of filenames for given pattern and environment.
+
+    Parameters
+    ----------
+    level : {'l0', 'l1a', 'l1b', 'hk'}
+        dict key to look up the respective subdir name in `get_data_path`.
+    pattern : str, optional
+        globbing pattern for `Path.glob()`
+    env : {'stage', 'production'}, optional
+        Switch to decide between production or staging environment.
+        Default: stage.
+    ext : str, optional
+        Extension for filtering what files to find. Usually '.fits.gz'
+    iterator : bool
+        Switch between returning iterator (default) or list.
+
+    Returns
+    -------
+    list or iterator
+        List or Iterator of filenames found.
+    """
     if pattern is None:
         pattern = '*'
     else:
         pattern = '*' + pattern + '*'
     path = get_data_path(level, env)
+    if not os.access(str(path), os.R_OK):
+    raise PathNotReadableError(path)
     result = map(str, path.glob(pattern + ext))
     return result if iterator else list(result)
 
@@ -88,14 +125,20 @@ def get_filenames(level, pattern=None, env='stage', ext='.fits.gz',
 def l1a_filenames(pattern=None, **kwargs):
     """Search for L1A filenames with patterns.
 
-    <pattern> will be bracketed with '*', so needs to be correct in itself.
-    For example "mode080-fuv" but not "mode080fuv".
+    Parameters
+    ----------
+    pattern : str
+        will be bracketed with '*', so needs to be correct in itself.
+        For example "mode080-fuv" but not "mode080fuv".
+    kwargs : dict
+        To provide to `get_filenames`
 
-    kwargs
-    ======
-        stage: False/True (gives production files if False). Default: True
-        ext: Extension is by default .fits.gz Use this to search for other
-             files like .txt
+    Examples
+    --------
+    `pattern` = "mode080-fuv"
+    but not
+    `pattern` = "mode080fuv"
+    as that pattern does not exist.
     """
     return get_filenames('l1a', pattern=pattern, **kwargs)
 
@@ -103,19 +146,42 @@ def l1a_filenames(pattern=None, **kwargs):
 def l1b_filenames(pattern=None, **kwargs):
     """Search for L1B filenames with patterns.
 
-    <pattern> will be bracketed with '*', so needs to be correct in itself.
-    For example "mode080-fuv" but not "mode080fuv".
+    Parameters
+    ----------
+    pattern : str
+        will be bracketed with '*', so needs to be correct in itself.
+        For example "mode080-fuv" but not "mode080fuv".
+    kwargs : dict
+        To provide to `get_filenames`
 
-    kwargs
-    ======
-        stage: False/True (gives production files if False). Default: True
-        ext: Extension is by default .fits.gz Use this to search for other
-             files like .txt
+    Examples
+    --------
+    `pattern` = "mode080-fuv"
+    but not
+    `pattern` = "mode080fuv"
+    as that pattern does not exist.
     """
     return get_filenames('l1b', pattern=pattern, **kwargs)
 
 
 def l0_filenames(pattern=None, **kwargs):
+    """Search for L1B filenames with patterns.
+
+    Parameters
+    ----------
+    pattern : str
+        will be bracketed with '*', so needs to be correct in itself.
+        For example "mode080-fuv" but not "mode080fuv".
+    kwargs : dict
+        To provide to `get_filenames`
+
+    Examples
+    --------
+    `pattern` = "mode080-fuv"
+    but not
+    `pattern` = "mode080fuv"
+    as that pattern does not exist.
+    """
     return get_filenames('l0', pattern=pattern, **kwargs)
 
 
@@ -130,12 +196,27 @@ def image_stats(data):
 
 
 def get_filename_df(level, env='stage', pattern=None):
-    if level != 'hk':
-        fnames = get_filenames(level, env=env, pattern=pattern)
-        Filename = ScienceFilename
-    else:
-        fnames = get_hk_filenames(env=env)
-        Filename = HKFilename
+    """Return pandas.DataFrame with filename data.
+
+    Parameters
+    ----------
+    level : {'l0', 'l1a', 'l1b', 'hk'}
+        dict key to look up the respective subdir name in `get_data_path`.
+    env : {'stage', 'production'}, optional
+        Switch to decide between production or staging environment.
+        Default: stage.
+    pattern : str
+        will be bracketed with '*', so needs to be correct in itself.
+        For example "mode080-fuv" but not "mode080fuv".
+        Provided to `get_filenames`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Indexed by time, if possible, sorted.
+    """
+    fnames = get_filenames(level, env=env, pattern=pattern)
+    Filename = ScienceFilename
     iuvs_fnames = []
     for fname in fnames:
         iuvs_fnames.append(Filename(fname))
@@ -677,11 +758,11 @@ class L1BReader(ScienceFitsFile):
                              'Integration',
                              'Engineering']
 
-    def __init__(self, fname, stage=True):
+    def __init__(self, fname, env='stage'):
 
         # fix relative path
         if not os.path.isabs(fname):
-            if stage:
+            if env == 'stage':
                 fname = str(stagelevel1bpath / fname)
             else:
                 fname = str(productionlevel1bpath / fname)
