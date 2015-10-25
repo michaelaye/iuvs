@@ -13,7 +13,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from pathlib import Path
 from scipy.ndimage.filters import generic_filter
 
-from .exceptions import DimensionsError, PathNotReadableError, UnknownEnvError
+from .exceptions import DimensionsError, PathNotReadableError
 
 host = socket.gethostname()
 home = Path(os.environ['HOME'])
@@ -38,7 +38,7 @@ def env_path(env):
     elif host.startswith('test-machine'):
         path = Path('/abc')
     else:
-        path = Path(os.environ['HOME']) / 'data' / 'iuvs'
+        path = Path(os.environ['HOME']) / 'Dropbox' / 'data' / 'iuvs'
     return path
 
 if host.startswith('maven-iuvs-itf'):
@@ -49,9 +49,9 @@ else:
 stagelevel1apath = env_path('stage') / 'level1a'
 stagelevel1bpath = env_path('stage') / 'level1b'
 stagelevel0path = env_path('stage') / 'level0'
-productionlevel1apath = production / 'level1a'
-productionlevel1bpath = production / 'level1b'
-productionlevel0path = production / 'level0'
+productionlevel1apath = env_path('production') / 'level1a'
+productionlevel1bpath = env_path('production') / 'level1b'
+productionlevel0path = env_path('production') / 'level0'
 
 mycmap = 'cubehelix'
 plotfolder = HOME / 'plots'
