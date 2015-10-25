@@ -24,7 +24,7 @@ if host.startswith('maven-iuvs-itf'):
     production = Path('/maven_iuvs/production/products')
     analysis_out = home / 'to_keep'
 else:
-    stage = home / 'data' / 'iuvs'
+    stage = home / 'Dropbox' / 'data' / 'iuvs'
     production = stage
     analysis_out = home / 'data' / 'iuvs' / 'to_keep'
 stagelevel1apath = stage / 'level1a'
@@ -136,6 +136,9 @@ def get_filename_df(level, env='stage', pattern=None):
     else:
         fnames = get_hk_filenames(env=env)
         Filename = HKFilename
+    if len(fnames) == 0:
+        print("No files found.")
+        return
     iuvs_fnames = []
     for fname in fnames:
         iuvs_fnames.append(Filename(fname))
