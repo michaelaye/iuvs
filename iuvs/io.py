@@ -19,6 +19,17 @@ host = socket.gethostname()
 home = Path(os.environ['HOME'])
 HOME = home
 
+if host.startswith('maven-iuvs-itf'):
+    analysis_out = home / 'to_keep'
+else:
+    analysis_out = home / 'data' / 'iuvs' / 'to_keep'
+
+mycmap = 'cubehelix'
+plotfolder = HOME / 'plots'
+outputfolder = HOME / 'output'
+
+sys_byteorder = ('>', '<')[sys.byteorder == 'little']
+
 
 def env_path(env):
     """Return root path depending on `env`.
@@ -40,24 +51,6 @@ def env_path(env):
     else:
         path = Path(os.environ['HOME']) / 'Dropbox' / 'data' / 'iuvs'
     return path
-
-if host.startswith('maven-iuvs-itf'):
-    analysis_out = home / 'to_keep'
-else:
-    analysis_out = home / 'data' / 'iuvs' / 'to_keep'
-
-stagelevel1apath = env_path('stage') / 'level1a'
-stagelevel1bpath = env_path('stage') / 'level1b'
-stagelevel0path = env_path('stage') / 'level0'
-productionlevel1apath = env_path('production') / 'level1a'
-productionlevel1bpath = env_path('production') / 'level1b'
-productionlevel0path = env_path('production') / 'level0'
-
-mycmap = 'cubehelix'
-plotfolder = HOME / 'plots'
-outputfolder = HOME / 'output'
-
-sys_byteorder = ('>', '<')[sys.byteorder == 'little']
 
 
 def convert_big_endian(data):
@@ -718,15 +711,14 @@ class L1AReader(ScienceFitsFile):
         'Engineering',
     ]
 
+    level = 'l1a'
+
     def __init__(self, fname, env='production'):
         # fix relative paths
         self.env = env
         fname = Path(fname)
         if not fname.is_absolute():
-            if env == 'stage':
-                fname = stagelevel1apath / fname
-            else:
-                fname = productionlevel1apath / fname
+            fname = get_data_path(self.level, env) / fname
         self.p = fname
         # call super init
         super(L1AReader, self).__init__(str(fname))
@@ -753,6 +745,7 @@ class L1BReader(ScienceFitsFile):
 
     """For Level1B"""
 
+    level = 'l1b'
     works_with_dataframes = ['DarkIntegration',
                              'DarkEngineering',
                              'background_light_source',
@@ -763,10 +756,7 @@ class L1BReader(ScienceFitsFile):
 
         # fix relative path
         if not os.path.isabs(fname):
-            if env == 'stage':
-                fname = str(stagelevel1bpath / fname)
-            else:
-                fname = str(productionlevel1bpath / fname)
+            fname = get_data_path(self.level, env) / fname
 
         # call super init
         super(L1BReader, self).__init__(fname)
