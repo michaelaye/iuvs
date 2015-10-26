@@ -213,25 +213,29 @@ def get_filename_df(level, env='stage', pattern=None):
     Filename = ScienceFilename
     iuvs_fnames = []
     for fname in fnames:
-        iuvs_fnames.append(Filename(fname))
+        if not level == 'hk':
+            iuvs_fnames.append(ScienceFilename(fname))
+        else:
+            iuvs_fnames.append(HKFilename(fname))
     df = pd.DataFrame([fname.as_series() for fname in iuvs_fnames])
     if level != 'hk':
         df['channel'] = df.channel.astype('category')
-        df.set_index('time', inplace=True)
-        df.sort_index(inplace=True)
-    else:
-        df.sort_values(by='datestring')
-    return df
+    df.set_index('time', inplace=True)
+    df.sort_index(inplace=True)
+    # next line filters for newest revisions
+    return df[df.p.isin(df.groupby('obs_id', sort=False)['p'].max())]
 
 
 def get_current_hk_fnames(env='stage'):
+    "return only the latest revisions of filenames per observation_id."
     df = get_filename_df('hk', env=env)
-    return df.groupby('obs_id')['p'].max()
+    return df.p
 
 
 def get_current_science_fnames(level, pattern=None, env='stage'):
+    "return only the latest revisions of filenames per observation_id."
     df = get_filename_df(level, pattern=pattern, env=env)
-    return df.groupby('obs_id')['p'].max()
+    return df.p
 
 
 def get_header_df(hdu, drop_comment=True):
@@ -323,6 +327,10 @@ class ScienceFilename(Filename):
                                          '%Y%m%dT%H%M%S')
         self.version_string = self.version + self.revision
         self.obs_id = '_'.join(self.basename.split('_')[:5])
+        if self.cycle_orbit.startswith('orbit'):
+            self.orbit = float(self.cycle_orbit[5:])
+        else:
+            self.orbit = np.nan
 
     def __eq__(self, other):
         weak_equality = ['mission', 'instrument', 'level', 'phase', 'timestr']
@@ -366,6 +374,8 @@ class HKFilename(Filename):
         self.datestring = tokens[4]
         self.version = tokens[5].split('.')[0]
         self.obs_id = '_'.join(self.basename.split('_')[:5])
+        year, month, day = tokens[4][:4], tokens[4][4:6], tokens[4][6:8]
+        self.time = dt.datetime(int(year), int(month), int(day))
 
 
 class FitsBinTable(object):
