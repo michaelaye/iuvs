@@ -295,8 +295,8 @@ class Filename(object):
 
     def __init__(self, fname):
         self.p = Path(fname)
-        self.root = os.path.dirname(str(fname))
-        self.basename = os.path.basename(fname)
+        self.root = self.p.parent
+        self.basename = self.p.name
         self.tokens = self.basename.split('_')
         self.mission, self.instrument = self.tokens[:2]
 
