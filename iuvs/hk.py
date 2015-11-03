@@ -1,10 +1,18 @@
+import argparse
 import sys
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import spiceypy as spice
 from astropy.io import fits
+from pathlib import Path
+
+from . import io
+from .spice import load_kernels
+
+dbpath = Path('/home/klay6683/to_keep/HK_DB_stage.h5')
+
+load_kernels()
 
 
 def format_times(sec, subsec):
@@ -64,3 +72,48 @@ class HKReader(object):
 
     def save_temps_to_hdf(self, fname):
         self.temp_df.to_hdf(fname, 'df')
+
+
+def process_hk_fname(fname):
+    hkfile = HKReader(str(fname))
+    hkfile.temp_df.to_hdf(str(dbpath), 'df', mode='a', format='table',
+                          append=True)
+
+
+def check_database_status():
+    currentdiff = dbpath.parent / 'current_datediff.hdf'
+    print("Give me 10 seconds to read the data...")
+    index = pd.read_hdf(str(dbpath), columns='index')
+    dates_used = pd.DatetimeIndex(np.unique(index.index.date))
+    hkfname_df = io.get_filename_df('hk', env='stage')
+    diff = hkfname_df.index.difference(dates_used)
+    if len(diff) > 0:
+        print("Found these new dates of HK files that are not yet in the data-base:\n{}"
+              .format(pd.Series(diff)))
+    else:
+        print("The HK database file {} is up to date.".format(str(dbpath)))
+        currentdiff.unlink()
+    diff.to_series().to_hdf(str(currentdiff), 'df')
+
+
+def update_database():
+    diff = pd.DatetimeIndex(pd.read_hdf(str(dbpath.parent / 'current_datediff.hdf')))
+    if len(diff) > 0:
+        hkfname_df = io.get_filename_df('hk', env='stage')
+        for index, row in hkfname_df.loc[diff].iterrows():
+            print("Adding {}".format(index.date()))
+            process_hk_fname(str(row.p))
+    else:
+        print("Nothing to update.")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('cmd', choices=['status', 'update'],
+                        help="Choose one of the available sub-commands.")
+
+    args = parser.parse_args()
+    if args.cmd == 'status':
+        check_database_status()
+    elif args.cmd == 'update':
+        update_database()
