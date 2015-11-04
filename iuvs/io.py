@@ -210,7 +210,6 @@ def get_filename_df(level, env='stage', pattern=None):
         Indexed by time, if possible, sorted.
     """
     fnames = get_filenames(level, env=env, pattern=pattern)
-    Filename = ScienceFilename
     iuvs_fnames = []
     for fname in fnames:
         if not level == 'hk':
@@ -295,8 +294,8 @@ class Filename(object):
 
     def __init__(self, fname):
         self.p = Path(fname)
-        self.root = os.path.dirname(str(fname))
-        self.basename = os.path.basename(fname)
+        self.root = self.p.parent
+        self.basename = self.p.name
         self.tokens = self.basename.split('_')
         self.mission, self.instrument = self.tokens[:2]
 

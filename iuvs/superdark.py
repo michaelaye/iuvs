@@ -13,6 +13,7 @@ root = Path('/home/klay6683/superdark')
 
 sns.set_style('white')
 
+
 def read_superdark():
     from scipy.io import idl
     d = idl.readsav(str(root / 'xmas_aurora_superdark_v1.sav'),
@@ -41,7 +42,7 @@ def recalibrate_primary_muv(l1b):
 
 def use_both(l1b, mydarks):
     superdark = fit_superdark_to_localdark(l1b.detector_dark[1])
-    repeated = np.repeat(superdark[np.newaxis,:], repeats=l1b.n_integrations, axis=0)
+    repeated = np.repeat(superdark[np.newaxis, :], repeats=l1b.n_integrations, axis=0)
     mediandark = np.median([mydarks, repeated], axis=0)
     primary = l1b.detector_raw - mediandark
     return primary
@@ -132,7 +133,6 @@ class Quicklooker(object):
         self.mysub = np.array(mysub)
         self.both = np.array(both)
 
-
     def plot_profiles(self, offset=None):
         if offset is None:
             offset = self.offset
@@ -148,18 +148,17 @@ class Quicklooker(object):
         ax.set_xlabel('Wavelengths [nm]')
         fig.savefig(str(root / 'profiles_orbit{}.png'.format(self.str_orbit)), dpi=200)
 
-
     def plot_profile_ratios(self, offset=None):
         if offset is None:
             offset = self.offset
         fig, ax = plt.subplots(figsize=(8, 6))
         func = ax.plot
-        basis = self.current.mean(axis=(0,1))
+        basis = self.current.mean(axis=(0, 1))
         for data, l, c in zip([self.recal, self.mysub, self.both],
                               ['superdark_scaled', 'localdark_scaled',
                                'mean of both darks'],
                               sns.color_palette()[1:]):
-            ratio = data.mean(axis=(0,1)) / basis
+            ratio = data.mean(axis=(0, 1)) / basis
             func(self.wavelengths[0], ratio[-offset:],
                  label=l, color=c)
         ax.legend(loc='best')

@@ -13,11 +13,12 @@ setup(
 
     scripts=['bin/show_versions'],
 
-    # entry_points={
-    #     "console_scripts": [
-    #         'show_versions = iuvs.show_versions'
-    #         ]
-    # },
+    entry_points={
+        "console_scripts": [
+            'show_versions = iuvs.show_versions',
+            'hk_database = iuvs.hk:main'
+            ]
+    },
 
     # metadata
     author="K.-Michael Aye",
