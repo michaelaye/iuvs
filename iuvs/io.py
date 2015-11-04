@@ -210,7 +210,6 @@ def get_filename_df(level, env='stage', pattern=None):
         Indexed by time, if possible, sorted.
     """
     fnames = get_filenames(level, env=env, pattern=pattern)
-    Filename = ScienceFilename
     iuvs_fnames = []
     for fname in fnames:
         if not level == 'hk':
