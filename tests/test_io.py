@@ -6,8 +6,8 @@ import hypothesis.strategies as st
 import pytest
 from hypothesis import given
 from hypothesis.extra.datetime import datetimes
-
 from iuvs import io
+from pathlib import Path
 
 skiptravis = pytest.mark.skipif('TRAVIS' in os.environ and
                                 os.environ['TRAVIS'] == 'true',
@@ -52,7 +52,7 @@ def test_Filename():
     assert fn.instrument == 'iuv'
     assert fn.basename == 'mvn_iuv_l1b_cruisecal2-mode080-'\
                           'muv_20140521T120029_v01_r01.fits.gz'
-    assert fn.root == '/Users/klay6683/data/iuvs/level1b'
+    assert fn.root == Path('/Users/klay6683/data/iuvs/level1b')
 
 
 def test_HKFilename():
